@@ -10,7 +10,7 @@ packages = [{include = "app"}, {include = "core"}, {include = "gan_infer"}]
 python = "^3.8"
 numpy = "^1.24.0"
 tensorflow = "^2.13.0"
-pyqt5 = "^5.15.0"
+pyside6 = "^6.5.0"
 matplotlib = "^3.7.0"
 scipy = "^1.10.0"
 
