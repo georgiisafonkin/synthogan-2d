@@ -3,264 +3,303 @@ Horizon generation and manipulation utilities.
 """
 
 
-import random
-import numpy as np
-from typing import List, Tuple
-from scipy.interpolate import CubicSpline, griddata
 import math
+import random
+from dataclasses import dataclass
+from typing import List, Tuple, Optional
+
+import numpy as np
+from scipy.interpolate import griddata
+from scipy.ndimage import gaussian_filter, gaussian_filter1d
 
 Point = Tuple[float, float]
 Horizon = List[Point]
 
-# Halton последовательность для равномерного случайного распределения точек (случай 2D)
-def _halton_sequence(dim: int, nbpts: int):
-    h = np.empty(nbpts * dim)
-    h.fill(np.nan)
-    p = np.empty(nbpts)
-    p.fill(np.nan)
-    p1 = [2, 3]
-    lognbpts = math.log(nbpts + 1)
-    
-    for i in range(dim):
-        b = p1[i]
-        n = int(math.ceil(lognbpts / math.log(b)))
-        for t in range(n):
-            p[t] = pow(b, -(t + 1))
 
+# ----------------------------
+# 1) Halton (2D, bases 2 and 3) — как в улучшенной версии
+# ----------------------------
+def halton_sequence_2d(nbpts: int) -> np.ndarray:
+    h = np.empty((nbpts, 2), dtype=float)
+    bases = [2, 3]
+
+    for i, b in enumerate(bases):
         for j in range(nbpts):
-            d = j + 1
-            sum_ = math.fmod(d, b) * p[0]
-            for t in range(1, n):
-                d = math.floor(d / b)
-                sum_ += math.fmod(d, b) * p[t]
-            h[j * dim + i] = sum_
-    return h.reshape(nbpts, dim)
+            f = 1.0
+            r = 0.0
+            k = j + 1
+            while k > 0:
+                f /= b
+                r += f * (k % b)
+                k //= b
+            h[j, i] = r
+    return h
 
 
-def _fit_plane_lsq(xyz):
+# ----------------------------
+# 2) Plane fitting / dipping plane — оставлено по твоей логике
+# ----------------------------
+def _fit_plane_lsq(xyz: np.ndarray) -> Tuple[float, float, float]:
     rows = xyz.shape[0]
-    g = np.ones((rows, 3))
-    g[:, 0] = xyz[:, 0]  # X
-    g[:, 1] = xyz[:, 1]  # Y
+    g = np.ones((rows, 3), dtype=float)
+    g[:, 0] = xyz[:, 0]
+    g[:, 1] = xyz[:, 1]
     z = xyz[:, 2]
-    
-    (a, b, c), _, _, _ = np.linalg.lstsq(g, z, rcond=None)
-    return a, b, c
+    (a, b, c), *_ = np.linalg.lstsq(g, z, rcond=None)
+    return float(a), float(b), float(c)
 
 
-def _create_dipping_plane(azimuth: float, dip: float, grid_shape_x: int, grid_shape_y: int):
-    
-    # Создаем три точки для определения плоскости
-    # Центральная точка на высоте 0
-    xyz1 = np.array([grid_shape_x / 2.0, grid_shape_y / 2.0, 0.0])
-    
-    # Точка в направлении простирания
-    strike_angle = azimuth + 90.0
+def _create_dipping_plane(azimuth_deg: float, dip_deg: float,
+                          grid_shape_x: int, grid_shape_y: int) -> np.ndarray:
+    xyz1 = np.array([grid_shape_x / 2.0, grid_shape_y / 2.0, 0.0], dtype=float)
+
+    strike_angle = azimuth_deg + 90.0
     if strike_angle > 360.0:
         strike_angle -= 360.0
     if strike_angle > 180.0:
         strike_angle -= 180.0
-    
-    strike_angle = math.radians(strike_angle)
+
+    strike_rad = math.radians(strike_angle)
     distance = min(grid_shape_x, grid_shape_y) / 4.0
-    x = distance * math.cos(strike_angle) + grid_shape_x / 2.0
-    y = distance * math.sin(strike_angle) + grid_shape_y / 2.0
-    xyz2 = np.array([x, y, 0.0])
-    
-    # Точка в направлении максимального падения
-    dip_angle = dip * 1.0
+
+    x2 = distance * math.cos(strike_rad) + grid_shape_x / 2.0
+    y2 = distance * math.sin(strike_rad) + grid_shape_y / 2.0
+    xyz2 = np.array([x2, y2, 0.0], dtype=float)
+
+    dip_angle = dip_deg
     if dip_angle > 360.0:
         dip_angle -= 360.0
     if dip_angle > 180.0:
         dip_angle -= 180.0
-    
-    dip_angle = math.radians(dip_angle)
-    strike_angle = math.radians(azimuth)
-    dip_elev = distance * math.sin(dip_angle) * math.sqrt(2.0)
-    
-    x = distance * math.cos(strike_angle) + grid_shape_x / 2.0
-    y = distance * math.sin(strike_angle) + grid_shape_y / 2.0
-    xyz3 = np.array([x, y, dip_elev])
-    
-    # Совмещаем точки
+
+    dip_rad = math.radians(dip_angle)
+    az_rad = math.radians(azimuth_deg)
+
+    dip_elev = distance * math.sin(dip_rad) * math.sqrt(2.0)
+
+    x3 = distance * math.cos(az_rad) + grid_shape_x / 2.0
+    y3 = distance * math.sin(az_rad) + grid_shape_y / 2.0
+    xyz3 = np.array([x3, y3, dip_elev], dtype=float)
+
     xyz = np.vstack((xyz1, xyz2, xyz3))
-    
-    # Подгоняем плоскость
     a, b, c = _fit_plane_lsq(xyz)
-    
-    # Вычисляем высоты для всей сетки
+
     z = np.zeros((grid_shape_x, grid_shape_y), dtype=float)
     for i in range(grid_shape_x):
         for j in range(grid_shape_y):
             z[i, j] = a * i + b * j + c
-    
     return z
 
 
-def generate_horizons(
-    W: float,
-    H: float,
-    num_horizons: int,
-    nx: int,
-    min_thickness: float,
-    max_thickness: float,
-    deformation_amplitude: float,
-    seed: int = None
-) -> List[Horizon]:
-    
-    if seed is not None:
-        np.random.seed(seed)
-        random.seed(seed)
-    
-    # ------------------------------
-    # толщины
-    # ------------------------------
-    # Используем гамма-распределение
-    thicknesses = np.random.gamma(4.0, 2, size=num_horizons)
-    # Нормализуем к заданному диапазону толщин
-    thickness_min, thickness_max = thicknesses.min(), thicknesses.max()
-    thicknesses = (thicknesses - thickness_min) / (thickness_max - thickness_min)
-    thicknesses = thicknesses * (max_thickness - min_thickness) + min_thickness
-    
-    base_ys = np.cumsum(thicknesses)
-    base_ys = H * base_ys / base_ys[-1] 
-    
-    # -------------------------
-    # наклон горизонтов
-    # --------------------------
-    # Генерация dips (степенное распределение)
-    dips = (1.0 - np.random.power(100, num_horizons)) * 7.0 
-    
-    # Генерация azimuths
-    azimuths = np.random.uniform(0.0, 360.0, size=num_horizons)
-    
-    # -------------------------------
-    # Генерация базового горизонта
-    # -------------------------------
-    def generate_base_horizon(grid_size_x: int, grid_size_y: int, initial: bool = True):
-        # Определяем количество случайных точек 
-        number_random_points = int(np.random.uniform(3, 5) + 0.5)
-        if initial:
-            number_random_points = int(np.random.uniform(25, 100) + 0.5)
-        
-        # Используем Halton последовательность для равномерного распределения точек
-        halton_points = _halton_sequence(2, number_random_points + 4)
-        
-        # Масштабируем точки к размеру сетки
-        xx = halton_points[-number_random_points:] * 1.3
-        xx -= 0.15
-        
-        x = xx[:, 0] * grid_size_x
-        y = xx[:, 1] * grid_size_y
-        
-        # Создаем случайные высоты
-        z = np.random.rand(number_random_points)
-        z -= z.mean()
-        if initial:
-            z *= deformation_amplitude * 2.0 / z.std()
-        else:
-            z *= deformation_amplitude * 0.5 / z.std()
-        
-        # Добавляем угловые точки с нулевой высотой для стабильности
-        x = np.hstack((x, [0, 0, grid_size_x, grid_size_x]))
-        y = np.hstack((y, [0, grid_size_y, 0, grid_size_y]))
-        z = np.hstack((z, [0, 0, 0, 0]))
-        
-        # Создаем регулярную сетку
-        xi = np.linspace(0, grid_size_x, grid_size_x)
-        yi = np.linspace(0, grid_size_y, grid_size_y)
-        
-        # Интерполяция (кубическая)
-        zi = griddata(
+# ----------------------------
+# 3) Улучшенная генерация base deformation: rng + NaN fill
+# ----------------------------
+def generate_base_deformation(nx: int, ny: int,
+                              deformation_amplitude: float,
+                              initial: bool = True,
+                              rng: Optional[np.random.Generator] = None) -> np.ndarray:
+    if rng is None:
+        rng = np.random.default_rng()
+
+    if initial:
+        npts = int(rng.uniform(10, 70) + 0.5)  # оставил твой диапазон
+    else:
+        npts = int(rng.uniform(3, 5) + 0.5)
+
+    halton_points = halton_sequence_2d(npts + 4)
+
+    xx = halton_points[-npts:] * 1.3
+    xx -= 0.15
+
+    x = xx[:, 0] * nx
+    y = xx[:, 1] * ny
+
+    z = rng.random(npts)
+    z = z - z.mean()
+
+    z_std = float(z.std())
+    if z_std < 1e-12:
+        z_std = 1.0
+
+    if initial:
+        z = z * (deformation_amplitude * 2.0 / z_std)
+    else:
+        z = z * (deformation_amplitude * 0.5 / z_std)
+
+    x = np.hstack((x, [0, 0, nx, nx]))
+    y = np.hstack((y, [0, ny, 0, ny]))
+    z = np.hstack((z, [0, 0, 0, 0]))
+
+    xi = np.linspace(0, nx, nx)
+    yi = np.linspace(0, ny, ny)
+
+    zi = griddata(
+        np.column_stack((x, y)),
+        z,
+        (xi[:, None], yi[None, :]),
+        method="cubic"
+    )
+
+    # Улучшение: заполнение NaN через nearest
+    if np.isnan(zi).any():
+        zi2 = griddata(
             np.column_stack((x, y)),
             z,
-            (xi[:, np.newaxis], yi[np.newaxis, :]),
-            method='cubic'
+            (xi[:, None], yi[None, :]),
+            method="nearest"
         )
-        
-        return zi
-    
-    # ------------------------------------------------------------
-    #  Генерация Perlin-like шума для естественных деформаций
-    # ------------------------------------------------------------
-    def generate_perlin_noise(size_x: int, size_y: int, octave: int = 2):
-        # Создаем базовый шум
-        base_noise = np.random.uniform(-1, 1, (size_x, size_y))
-        
-        # Применяем сглаживание в зависимости от octave
-        from scipy.ndimage import gaussian_filter
-        noise = gaussian_filter(base_noise, sigma=octave)
-        
-        return noise
-    
-    # ------------------------------------------------------------
-    # 5. Горизонтальная сетка
-    # ------------------------------------------------------------
-    x = np.linspace(0, W, nx)
-    
-    # Генерация базового деформационного поля
-    base_deformation = generate_base_horizon(nx, num_horizons, initial=True)
-    
-    # Добавление Perlin-шума
-    perlin_noise = generate_perlin_noise(nx, num_horizons, octave=2)
-    perlin_noise = perlin_noise * (deformation_amplitude * 0.3)
-    
-    # ------------------------------------------------------------
-    # 6. Добавление наклонов для каждого слоя
-    # ------------------------------------------------------------
-    layer_deformations = np.zeros((nx, num_horizons))
-    for layer_idx in range(num_horizons):
-        if dips[layer_idx] > 0:  # Добавляем наклон только если dip > 0
-            dip_plane = _create_dipping_plane(
-                azimuths[layer_idx],
-                dips[layer_idx],
-                nx,
-                num_horizons
-            )
-            # Нормализуем и масштабируем
-            dip_plane = dip_plane - dip_plane.min()
-            if dip_plane.max() > 0:
-                dip_plane = dip_plane / dip_plane.max() * dips[layer_idx] * 10
-            layer_deformations[:, layer_idx] = dip_plane[:, layer_idx] if layer_idx < nx else dip_plane[:, 0]
-    
-    # ---------------------------
-    # 7. Вертикальное затухание
-    # ---------------------------
-    def vertical_weight(y_norm):
-        return np.exp(-y_norm * 3.0)
-    
-    # ---------------------------
-    # 8. Формирование горизонтов
-    # ----------------------------
-    horizons: List[Horizon] = []
-    
+        zi = np.where(np.isnan(zi), zi2, zi)
+
+    return zi
+
+
+def generate_perlin_like_noise(nx: int, ny: int, octave: float = 2.0,
+                               rng: Optional[np.random.Generator] = None) -> np.ndarray:
+    if rng is None:
+        rng = np.random.default_rng()
+    base_noise = rng.uniform(-1.0, 1.0, (nx, ny))
+    return gaussian_filter(base_noise, sigma=octave)
+
+
+def vertical_weight(y_norm: float) -> float:
+    return float(np.exp(-y_norm * 3.0))
+
+
+# ----------------------------
+# 4) Улучшение: запрет пересечений + min_gap
+# ----------------------------
+@dataclass(frozen=True)
+class HorizonParams:
+    W: float
+    H: float
+    num_horizons: int
+    nx: int
+    min_thickness: float
+    max_thickness: float
+    deformation_amplitude: float
+    seed: Optional[int] = None
+    min_gap: Optional[float] = None  # если None -> берём min_thickness
+
+
+def _enforce_no_crossing(Y: np.ndarray, min_gap: float, smooth_sigma: float = 6.0) -> Tuple[np.ndarray, np.ndarray]:
+    Yf = Y.copy()
+    order = np.argsort(Yf.mean(axis=1))  # top->bottom
+    Yf = Yf[order, :]
+
+    for i in range(1, Yf.shape[0]):
+        deficit = (Yf[i - 1, :] + min_gap) - Yf[i, :]
+        deficit = np.maximum(deficit, 0.0)
+
+        if smooth_sigma and smooth_sigma > 0:
+            deficit = gaussian_filter1d(deficit, sigma=smooth_sigma)
+
+        Yf[i, :] += deficit
+
+    return Yf, order
+
+
+# ----------------------------
+# 5) ТВОЯ generate_horizons, но с улучшениями (dataclass, rng, NaN-fill, no-crossing)
+# ----------------------------
+def generate_horizons(params: HorizonParams) -> List[Horizon]:
+    # RNG (улучшение)
+    if params.seed is None:
+        rng = np.random.default_rng()
+        random.seed()
+    else:
+        rng = np.random.default_rng(params.seed)
+        random.seed(params.seed)
+
+    W = float(params.W)
+    H = float(params.H)
+    num_h = int(params.num_horizons)
+    nx = int(params.nx)
+
+    min_gap = float(params.min_gap) if params.min_gap is not None else float(params.min_thickness)
+
+    # толщины (оставлено как у тебя, но через rng)
+    thicknesses = rng.gamma(shape=4.0, scale=2.0, size=num_h)
+    tmin, tmax = float(thicknesses.min()), float(thicknesses.max())
+    if abs(tmax - tmin) < 1e-12:
+        thicknesses = np.full(num_h, (params.min_thickness + params.max_thickness) / 2.0, dtype=float)
+    else:
+        thicknesses = (thicknesses - tmin) / (tmax - tmin)
+        thicknesses = thicknesses * (params.max_thickness - params.min_thickness) + params.min_thickness
+
+    base_ys = np.cumsum(thicknesses)
+    base_ys = H * base_ys / base_ys[-1]
+
+    # dips & azimuths (через rng)
+    dips = (1.0 - rng.power(100, size=num_h)) * 7.0
+    azimuths = rng.uniform(0.0, 360.0, size=num_h)
+
+    # X grid
+    x = np.linspace(0.0, W, nx)
+
+    # base deformation (улучшение: rng + NaN-fill внутри)
+    base_deformation = generate_base_deformation(
+        nx=nx,
+        ny=num_h,
+        deformation_amplitude=params.deformation_amplitude,
+        initial=True,
+        rng=rng
+    )
+
+    # perlin-like noise (через rng)
+    perlin_noise = generate_perlin_like_noise(nx, num_h, octave=2.0, rng=rng)
+    perlin_noise *= (params.deformation_amplitude * 0.3)
+
+    # dipping planes
+    layer_deformations = np.zeros((nx, num_h), dtype=float)
+    for layer_idx in range(num_h):
+        dip_val = float(dips[layer_idx])
+        if dip_val <= 0:
+            continue
+
+        dip_plane = _create_dipping_plane(
+            azimuth_deg=float(azimuths[layer_idx]),
+            dip_deg=dip_val,
+            grid_shape_x=nx,
+            grid_shape_y=num_h
+        )
+        dip_plane = dip_plane - float(dip_plane.min())
+        maxv = float(dip_plane.max())
+        if maxv > 1e-12:
+            dip_plane = dip_plane / maxv * dip_val * 10.0
+
+        layer_deformations[:, layer_idx] = dip_plane[:, layer_idx]
+
+    # сначала собираем Y-матрицу (улучшение)
+    Y = np.zeros((num_h, nx), dtype=float)
+
     for layer_idx, y0 in enumerate(base_ys):
-        y_norm = y0 / H
-        
-        # Базовые Y-координаты
-        y_coords = np.ones(nx) * y0
-        
-        # Добавляем базовую деформацию
+        y0 = float(y0)
+        y_norm = (y0 / H) if H != 0 else 0.0
+        w = vertical_weight(y_norm)
+
+        y_coords = np.ones(nx, dtype=float) * y0
+
         if layer_idx < base_deformation.shape[1]:
             y_coords += base_deformation[:, layer_idx]
         else:
             y_coords += base_deformation[:, -1]
-        
-        # Добавляем Perlin-шум с вертикальным затуханием
+
         if layer_idx < perlin_noise.shape[1]:
-            y_coords += perlin_noise[:, layer_idx] * vertical_weight(y_norm)
+            y_coords += perlin_noise[:, layer_idx] * w
         else:
-            y_coords += perlin_noise[:, -1] * vertical_weight(y_norm)
-        
-        # Добавляем слоевой наклон
-        if dips[layer_idx] > 0 and layer_idx < layer_deformations.shape[1]:
-            y_coords += layer_deformations[:, layer_idx] * vertical_weight(y_norm)
-        
-        # Создаем горизонт как список точек
-        horizon_line = []
-        for i, xi in enumerate(x):
-            horizon_line.append((xi, y_coords[i]))
-        
-        horizons.append(horizon_line)
-        
+            y_coords += perlin_noise[:, -1] * w
+
+        if layer_idx < layer_deformations.shape[1]:
+            y_coords += layer_deformations[:, layer_idx] * w
+
+        Y[layer_idx, :] = y_coords
+
+    # Улучшение: enforce no crossing / min spacing
+    Y_fixed, _order = _enforce_no_crossing(Y, min_gap=min_gap)
+
+    # обратно в список горизонтов (в порядке top->bottom после сортировки)
+    horizons: List[Horizon] = []
+    for i in range(num_h):
+        horizons.append([(float(x[j]), float(Y_fixed[i, j])) for j in range(nx)])
+
     return horizons

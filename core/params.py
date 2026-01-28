@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 @dataclass(frozen=True)
 class HorizonParams:
@@ -9,3 +10,5 @@ class HorizonParams:
     min_thickness: float
     max_thickness: float
     deformation_amplitude: float
+    seed: Optional[int] = None
+    min_gap: Optional[float] = None
