@@ -78,7 +78,26 @@ class MainWindow(QMainWindow):
 
         self.ui.opacitySpinBox.valueChanged.connect(self._update_opacity)
 
+        self.ui.horizonsCheckBox.toggled.connect(self._update_manual_controls)
+        self.ui.riftsCheckBox.toggled.connect(self._update_manual_controls)
+        self.ui.distortionCheckBox.toggled.connect(self._update_manual_controls)
+        self._update_manual_controls()
+
         self._apply_canvas_size()
+
+    def _update_manual_controls(self) -> None:
+        horizons_enabled = self.ui.horizonsCheckBox.isChecked()
+        rifts_enabled = self.ui.riftsCheckBox.isChecked()
+        distortions_enabled = self.ui.distortionCheckBox.isChecked()
+
+        self.ui.horizonsDrawButton.setEnabled(horizons_enabled)
+        self.ui.horizonsAddButton.setEnabled(horizons_enabled)
+
+        self.ui.riftsDrawButton.setEnabled(rifts_enabled)
+        self.ui.riftsAddButton.setEnabled(rifts_enabled)
+
+        self.ui.distortionDrawButton.setEnabled(distortions_enabled)
+        self.ui.distortionCompressButton.setEnabled(distortions_enabled)
 
     def _apply_canvas_size(self) -> None:
         width = int(self.ui.widthSpinBox.value())
@@ -107,14 +126,13 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Cleared {element_type} strokes.", 3000)
 
     def _save_placeholder(self, element_type: str) -> None:
-        filepath = Dialogs.save_mask_dialog(self)
-        if filepath:
-            Dialogs.info(self, "Save", f"Saved {element_type} placeholder to {filepath}.")
+        self._set_drawing_mode("off")
 
     def _save_mask_placeholder(self) -> None:
         filepath = Dialogs.save_mask_dialog(self)
         if filepath:
             Dialogs.info(self, "Save", f"Saved mask placeholder to {filepath}.")
+        self._set_drawing_mode("off")
 
     def _update_opacity(self, value: int) -> None:
         opacity = max(0.0, min(1.0, value / 100.0))
