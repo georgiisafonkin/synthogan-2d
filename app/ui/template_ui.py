@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QGraphicsView, QGroupBox,
-    QHBoxLayout, QLineEdit, QMainWindow, QMenuBar,
-    QPushButton, QSizePolicy, QSpacerItem, QSpinBox,
+    QHBoxLayout, QLabel, QMainWindow, QMenuBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem, QSpinBox,
     QStatusBar, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
@@ -27,323 +27,338 @@ class Ui_MainWindow(object):
         MainWindow.resize(1048, 842)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.groupBox = QGroupBox(self.centralwidget)
+        self.centralLayout = QVBoxLayout(self.centralwidget)
+        self.centralLayout.setObjectName(u"centralLayout")
+        self.scrollArea = QScrollArea(self.centralwidget)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.scrollAreaLayout.setObjectName(u"scrollAreaLayout")
+        self.groupBox = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox.setObjectName(u"groupBox")
-        self.groupBox.setGeometry(QRect(30, 50, 951, 681))
         self.groupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.widget = QWidget(self.groupBox)
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(80, 40, 793, 546))
-        self.verticalLayout_4 = QVBoxLayout(self.widget)
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_3 = QVBoxLayout()
-        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.groupBoxLayout = QVBoxLayout(self.groupBox)
+        self.groupBoxLayout.setObjectName(u"groupBoxLayout")
+        self.layoutWidget = QWidget(self.groupBox)
+        self.layoutWidget.setObjectName(u"layoutWidget")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.groupBox.setSizePolicy(sizePolicy)
+        self.layoutWidget.setSizePolicy(sizePolicy)
+        self.elementsvVerticalLayout = QVBoxLayout(self.layoutWidget)
+        self.elementsvVerticalLayout.setObjectName(u"elementsvVerticalLayout")
+        self.elementsvVerticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.canvasHorizontalLayout = QHBoxLayout()
+        self.canvasHorizontalLayout.setObjectName(u"canvasHorizontalLayout")
+        self.leftHorizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.horizontalLayout.addItem(self.horizontalSpacer)
+        self.canvasHorizontalLayout.addItem(self.leftHorizontalSpacer)
 
-        self.lineEdit = QLineEdit(self.widget)
-        self.lineEdit.setObjectName(u"lineEdit")
+        self.WidthLabel = QLabel(self.layoutWidget)
+        self.WidthLabel.setObjectName(u"WidthLabel")
 
-        self.horizontalLayout.addWidget(self.lineEdit)
+        self.canvasHorizontalLayout.addWidget(self.WidthLabel)
 
-        self.spinBox = QSpinBox(self.widget)
-        self.spinBox.setObjectName(u"spinBox")
+        self.widthSpinBox = QSpinBox(self.layoutWidget)
+        self.widthSpinBox.setObjectName(u"widthSpinBox")
 
-        self.horizontalLayout.addWidget(self.spinBox)
+        self.canvasHorizontalLayout.addWidget(self.widthSpinBox)
 
-        self.lineEdit_2 = QLineEdit(self.widget)
-        self.lineEdit_2.setObjectName(u"lineEdit_2")
+        self.HeightLabel = QLabel(self.layoutWidget)
+        self.HeightLabel.setObjectName(u"HeightLabel")
 
-        self.horizontalLayout.addWidget(self.lineEdit_2)
+        self.canvasHorizontalLayout.addWidget(self.HeightLabel)
 
-        self.spinBox_2 = QSpinBox(self.widget)
-        self.spinBox_2.setObjectName(u"spinBox_2")
+        self.heightSpinBox = QSpinBox(self.layoutWidget)
+        self.heightSpinBox.setObjectName(u"heightSpinBox")
 
-        self.horizontalLayout.addWidget(self.spinBox_2)
+        self.canvasHorizontalLayout.addWidget(self.heightSpinBox)
 
-        self.pushButton = QPushButton(self.widget)
-        self.pushButton.setObjectName(u"pushButton")
+        self.canvasSizeButton = QPushButton(self.layoutWidget)
+        self.canvasSizeButton.setObjectName(u"canvasSizeButton")
 
-        self.horizontalLayout.addWidget(self.pushButton)
+        self.canvasHorizontalLayout.addWidget(self.canvasSizeButton)
 
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.rightHorizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.horizontalLayout.addItem(self.horizontalSpacer_2)
+        self.canvasHorizontalLayout.addItem(self.rightHorizontalSpacer)
 
 
-        self.verticalLayout_3.addLayout(self.horizontalLayout)
+        self.elementsvVerticalLayout.addLayout(self.canvasHorizontalLayout)
 
-        self.graphicsView = QGraphicsView(self.widget)
-        self.graphicsView.setObjectName(u"graphicsView")
+        self.canvasGraphicsView = QGraphicsView(self.layoutWidget)
+        self.canvasGraphicsView.setObjectName(u"canvasGraphicsView")
+        self.canvasGraphicsView.setSizePolicy(sizePolicy)
 
-        self.verticalLayout_3.addWidget(self.graphicsView)
+        self.elementsvVerticalLayout.addWidget(self.canvasGraphicsView)
 
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.lineEdit_4 = QLineEdit(self.widget)
-        self.lineEdit_4.setObjectName(u"lineEdit_4")
+        self.horizonsHorizontalLayout = QHBoxLayout()
+        self.horizonsHorizontalLayout.setObjectName(u"horizonsHorizontalLayout")
+        self.horizonsLabel = QLabel(self.layoutWidget)
+        self.horizonsLabel.setObjectName(u"horizonsLabel")
 
-        self.horizontalLayout_2.addWidget(self.lineEdit_4)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsLabel)
 
-        self.spinBox_4 = QSpinBox(self.widget)
-        self.spinBox_4.setObjectName(u"spinBox_4")
+        self.horizonsSpinBox = QSpinBox(self.layoutWidget)
+        self.horizonsSpinBox.setObjectName(u"horizonsSpinBox")
 
-        self.horizontalLayout_2.addWidget(self.spinBox_4)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsSpinBox)
 
-        self.pushButton_2 = QPushButton(self.widget)
-        self.pushButton_2.setObjectName(u"pushButton_2")
+        self.horizonsCreateButton = QPushButton(self.layoutWidget)
+        self.horizonsCreateButton.setObjectName(u"horizonsCreateButton")
 
-        self.horizontalLayout_2.addWidget(self.pushButton_2)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsCreateButton)
 
-        self.checkBox_2 = QCheckBox(self.widget)
-        self.checkBox_2.setObjectName(u"checkBox_2")
+        self.horizonsCheckBox = QCheckBox(self.layoutWidget)
+        self.horizonsCheckBox.setObjectName(u"horizonsCheckBox")
 
-        self.horizontalLayout_2.addWidget(self.checkBox_2)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsCheckBox)
 
-        self.pushButton_3 = QPushButton(self.widget)
-        self.pushButton_3.setObjectName(u"pushButton_3")
+        self.horizonsAddButton = QPushButton(self.layoutWidget)
+        self.horizonsAddButton.setObjectName(u"horizonsAddButton")
 
-        self.horizontalLayout_2.addWidget(self.pushButton_3)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsAddButton)
 
-        self.pushButton_4 = QPushButton(self.widget)
-        self.pushButton_4.setObjectName(u"pushButton_4")
+        self.horizonsClearButton = QPushButton(self.layoutWidget)
+        self.horizonsClearButton.setObjectName(u"horizonsClearButton")
 
-        self.horizontalLayout_2.addWidget(self.pushButton_4)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsClearButton)
 
-        self.pushButton_6 = QPushButton(self.widget)
-        self.pushButton_6.setObjectName(u"pushButton_6")
+        self.horizonsSaveButton = QPushButton(self.layoutWidget)
+        self.horizonsSaveButton.setObjectName(u"horizonsSaveButton")
 
-        self.horizontalLayout_2.addWidget(self.pushButton_6)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsSaveButton)
 
-        self.pushButton_5 = QPushButton(self.widget)
-        self.pushButton_5.setObjectName(u"pushButton_5")
-        self.pushButton_5.setEnabled(True)
+        self.horizonsDrawButton = QPushButton(self.layoutWidget)
+        self.horizonsDrawButton.setObjectName(u"horizonsDrawButton")
+        self.horizonsDrawButton.setEnabled(True)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_5.sizePolicy().hasHeightForWidth())
-        self.pushButton_5.setSizePolicy(sizePolicy)
-        self.pushButton_5.setMaximumSize(QSize(1000202, 16777215))
+        sizePolicy.setHeightForWidth(self.horizonsDrawButton.sizePolicy().hasHeightForWidth())
+        self.horizonsDrawButton.setSizePolicy(sizePolicy)
+        self.horizonsDrawButton.setMaximumSize(QSize(1000202, 16777215))
         font = QFont()
         font.setFamilies([u"MS Gothic"])
         font.setPointSize(20)
-        self.pushButton_5.setFont(font)
+        self.horizonsDrawButton.setFont(font)
 
-        self.horizontalLayout_2.addWidget(self.pushButton_5)
+        self.horizonsHorizontalLayout.addWidget(self.horizonsDrawButton)
 
 
-        self.verticalLayout_3.addLayout(self.horizontalLayout_2)
+        self.elementsvVerticalLayout.addLayout(self.horizonsHorizontalLayout)
 
-        self.horizontalLayout_11 = QHBoxLayout()
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.verticalLayout = QVBoxLayout()
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.horizontalLayout_6 = QHBoxLayout()
-        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
-        self.lineEdit_7 = QLineEdit(self.widget)
-        self.lineEdit_7.setObjectName(u"lineEdit_7")
+        self.riftsHorizontalLayout = QHBoxLayout()
+        self.riftsHorizontalLayout.setObjectName(u"riftsHorizontalLayout")
+        self.riftsVerticalLayout = QVBoxLayout()
+        self.riftsVerticalLayout.setObjectName(u"riftsVerticalLayout")
+        self.lengthHorizontalLayout = QHBoxLayout()
+        self.lengthHorizontalLayout.setObjectName(u"lengthHorizontalLayout")
+        self.lengthLabel = QLabel(self.layoutWidget)
+        self.lengthLabel.setObjectName(u"lengthLabel")
 
-        self.horizontalLayout_6.addWidget(self.lineEdit_7)
+        self.lengthHorizontalLayout.addWidget(self.lengthLabel)
 
-        self.spinBox_7 = QSpinBox(self.widget)
-        self.spinBox_7.setObjectName(u"spinBox_7")
+        self.lengthFromSpinBox = QSpinBox(self.layoutWidget)
+        self.lengthFromSpinBox.setObjectName(u"lengthFromSpinBox")
 
-        self.horizontalLayout_6.addWidget(self.spinBox_7)
+        self.lengthHorizontalLayout.addWidget(self.lengthFromSpinBox)
 
-        self.pushButton_7 = QPushButton(self.widget)
-        self.pushButton_7.setObjectName(u"pushButton_7")
+        self.lengthToSpinBox = QSpinBox(self.layoutWidget)
+        self.lengthToSpinBox.setObjectName(u"lengthToSpinBox")
 
-        self.horizontalLayout_6.addWidget(self.pushButton_7)
+        self.lengthHorizontalLayout.addWidget(self.lengthToSpinBox)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout_6)
+        self.riftsVerticalLayout.addLayout(self.lengthHorizontalLayout)
 
-        self.horizontalLayout_7 = QHBoxLayout()
-        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
-        self.lineEdit_5 = QLineEdit(self.widget)
-        self.lineEdit_5.setObjectName(u"lineEdit_5")
+        self.anglesHorizontalLayout = QHBoxLayout()
+        self.anglesHorizontalLayout.setObjectName(u"anglesHorizontalLayout")
+        self.anglesLabel = QLabel(self.layoutWidget)
+        self.anglesLabel.setObjectName(u"anglesLabel")
 
-        self.horizontalLayout_7.addWidget(self.lineEdit_5)
+        self.anglesHorizontalLayout.addWidget(self.anglesLabel)
 
-        self.spinBox_5 = QSpinBox(self.widget)
-        self.spinBox_5.setObjectName(u"spinBox_5")
+        self.anglesFromSpinBox = QSpinBox(self.layoutWidget)
+        self.anglesFromSpinBox.setObjectName(u"anglesFromSpinBox")
 
-        self.horizontalLayout_7.addWidget(self.spinBox_5)
+        self.anglesHorizontalLayout.addWidget(self.anglesFromSpinBox)
 
-        self.spinBox_8 = QSpinBox(self.widget)
-        self.spinBox_8.setObjectName(u"spinBox_8")
+        self.anglesToSpinBox = QSpinBox(self.layoutWidget)
+        self.anglesToSpinBox.setObjectName(u"anglesToSpinBox")
 
-        self.horizontalLayout_7.addWidget(self.spinBox_8)
+        self.anglesHorizontalLayout.addWidget(self.anglesToSpinBox)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout_7)
+        self.riftsVerticalLayout.addLayout(self.anglesHorizontalLayout)
 
-        self.horizontalLayout_8 = QHBoxLayout()
-        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
-        self.lineEdit_8 = QLineEdit(self.widget)
-        self.lineEdit_8.setObjectName(u"lineEdit_8")
+        self.amplitudeHorizontalLayout = QHBoxLayout()
+        self.amplitudeHorizontalLayout.setObjectName(u"amplitudeHorizontalLayout")
+        self.amplitudeLabel = QLabel(self.layoutWidget)
+        self.amplitudeLabel.setObjectName(u"amplitudeLabel")
 
-        self.horizontalLayout_8.addWidget(self.lineEdit_8)
+        self.amplitudeHorizontalLayout.addWidget(self.amplitudeLabel)
 
-        self.spinBox_10 = QSpinBox(self.widget)
-        self.spinBox_10.setObjectName(u"spinBox_10")
+        self.amplitudeFromSpinBox = QSpinBox(self.layoutWidget)
+        self.amplitudeFromSpinBox.setObjectName(u"amplitudeFromSpinBox")
 
-        self.horizontalLayout_8.addWidget(self.spinBox_10)
+        self.amplitudeHorizontalLayout.addWidget(self.amplitudeFromSpinBox)
 
-        self.spinBox_11 = QSpinBox(self.widget)
-        self.spinBox_11.setObjectName(u"spinBox_11")
+        self.amplitudeToSpinBox = QSpinBox(self.layoutWidget)
+        self.amplitudeToSpinBox.setObjectName(u"amplitudeToSpinBox")
 
-        self.horizontalLayout_8.addWidget(self.spinBox_11)
+        self.amplitudeHorizontalLayout.addWidget(self.amplitudeToSpinBox)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout_8)
+        self.riftsVerticalLayout.addLayout(self.amplitudeHorizontalLayout)
 
-        self.horizontalLayout_9 = QHBoxLayout()
-        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
-        self.lineEdit_6 = QLineEdit(self.widget)
-        self.lineEdit_6.setObjectName(u"lineEdit_6")
+        self.riftsAmountHorizontalLayout = QHBoxLayout()
+        self.riftsAmountHorizontalLayout.setObjectName(u"riftsAmountHorizontalLayout")
+        self.riftsAmountLabel = QLabel(self.layoutWidget)
+        self.riftsAmountLabel.setObjectName(u"riftsAmountLabel")
 
-        self.horizontalLayout_9.addWidget(self.lineEdit_6)
+        self.riftsAmountHorizontalLayout.addWidget(self.riftsAmountLabel)
 
-        self.spinBox_6 = QSpinBox(self.widget)
-        self.spinBox_6.setObjectName(u"spinBox_6")
+        self.riftsAmountSpinBox = QSpinBox(self.layoutWidget)
+        self.riftsAmountSpinBox.setObjectName(u"riftsAmountSpinBox")
 
-        self.horizontalLayout_9.addWidget(self.spinBox_6)
+        self.riftsAmountHorizontalLayout.addWidget(self.riftsAmountSpinBox)
 
-        self.spinBox_9 = QSpinBox(self.widget)
-        self.spinBox_9.setObjectName(u"spinBox_9")
+        self.riftsCreateButton = QPushButton(self.layoutWidget)
+        self.riftsCreateButton.setObjectName(u"riftsCreateButton")
 
-        self.horizontalLayout_9.addWidget(self.spinBox_9)
+        self.riftsAmountHorizontalLayout.addWidget(self.riftsCreateButton)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout_9)
+        self.riftsVerticalLayout.addLayout(self.riftsAmountHorizontalLayout)
 
 
-        self.horizontalLayout_11.addLayout(self.verticalLayout)
+        self.riftsHorizontalLayout.addLayout(self.riftsVerticalLayout)
 
-        self.checkBox_3 = QCheckBox(self.widget)
-        self.checkBox_3.setObjectName(u"checkBox_3")
+        self.riftsCheckBox = QCheckBox(self.layoutWidget)
+        self.riftsCheckBox.setObjectName(u"riftsCheckBox")
 
-        self.horizontalLayout_11.addWidget(self.checkBox_3)
+        self.riftsHorizontalLayout.addWidget(self.riftsCheckBox)
 
-        self.pushButton_8 = QPushButton(self.widget)
-        self.pushButton_8.setObjectName(u"pushButton_8")
+        self.riftsAddButton = QPushButton(self.layoutWidget)
+        self.riftsAddButton.setObjectName(u"riftsAddButton")
 
-        self.horizontalLayout_11.addWidget(self.pushButton_8)
+        self.riftsHorizontalLayout.addWidget(self.riftsAddButton)
 
-        self.pushButton_9 = QPushButton(self.widget)
-        self.pushButton_9.setObjectName(u"pushButton_9")
+        self.riftsClearButton = QPushButton(self.layoutWidget)
+        self.riftsClearButton.setObjectName(u"riftsClearButton")
 
-        self.horizontalLayout_11.addWidget(self.pushButton_9)
+        self.riftsHorizontalLayout.addWidget(self.riftsClearButton)
 
-        self.pushButton_10 = QPushButton(self.widget)
-        self.pushButton_10.setObjectName(u"pushButton_10")
+        self.riftsSaveButton = QPushButton(self.layoutWidget)
+        self.riftsSaveButton.setObjectName(u"riftsSaveButton")
 
-        self.horizontalLayout_11.addWidget(self.pushButton_10)
+        self.riftsHorizontalLayout.addWidget(self.riftsSaveButton)
 
-        self.pushButton_11 = QPushButton(self.widget)
-        self.pushButton_11.setObjectName(u"pushButton_11")
-        self.pushButton_11.setEnabled(True)
-        sizePolicy.setHeightForWidth(self.pushButton_11.sizePolicy().hasHeightForWidth())
-        self.pushButton_11.setSizePolicy(sizePolicy)
-        self.pushButton_11.setMaximumSize(QSize(1000202, 16777215))
-        self.pushButton_11.setFont(font)
+        self.riftsDrawButton = QPushButton(self.layoutWidget)
+        self.riftsDrawButton.setObjectName(u"riftsDrawButton")
+        self.riftsDrawButton.setEnabled(True)
+        sizePolicy.setHeightForWidth(self.riftsDrawButton.sizePolicy().hasHeightForWidth())
+        self.riftsDrawButton.setSizePolicy(sizePolicy)
+        self.riftsDrawButton.setMaximumSize(QSize(1000202, 16777215))
+        self.riftsDrawButton.setFont(font)
 
-        self.horizontalLayout_11.addWidget(self.pushButton_11)
+        self.riftsHorizontalLayout.addWidget(self.riftsDrawButton)
 
 
-        self.verticalLayout_3.addLayout(self.horizontalLayout_11)
+        self.elementsvVerticalLayout.addLayout(self.riftsHorizontalLayout)
 
-        self.horizontalLayout_37 = QHBoxLayout()
-        self.horizontalLayout_37.setObjectName(u"horizontalLayout_37")
-        self.lineEdit_9 = QLineEdit(self.widget)
-        self.lineEdit_9.setObjectName(u"lineEdit_9")
+        self.distortionHorizontalLayout = QHBoxLayout()
+        self.distortionHorizontalLayout.setObjectName(u"distortionHorizontalLayout")
+        self.distortionLabel = QLabel(self.layoutWidget)
+        self.distortionLabel.setObjectName(u"distortionLabel")
 
-        self.horizontalLayout_37.addWidget(self.lineEdit_9)
+        self.distortionHorizontalLayout.addWidget(self.distortionLabel)
 
-        self.spinBox_12 = QSpinBox(self.widget)
-        self.spinBox_12.setObjectName(u"spinBox_12")
+        self.distortionSpinBox = QSpinBox(self.layoutWidget)
+        self.distortionSpinBox.setObjectName(u"distortionSpinBox")
 
-        self.horizontalLayout_37.addWidget(self.spinBox_12)
+        self.distortionHorizontalLayout.addWidget(self.distortionSpinBox)
 
-        self.pushButton_12 = QPushButton(self.widget)
-        self.pushButton_12.setObjectName(u"pushButton_12")
+        self.distortionApplyButton = QPushButton(self.layoutWidget)
+        self.distortionApplyButton.setObjectName(u"distortionApplyButton")
 
-        self.horizontalLayout_37.addWidget(self.pushButton_12)
+        self.distortionHorizontalLayout.addWidget(self.distortionApplyButton)
 
-        self.checkBox_4 = QCheckBox(self.widget)
-        self.checkBox_4.setObjectName(u"checkBox_4")
+        self.distortionCheckBox = QCheckBox(self.layoutWidget)
+        self.distortionCheckBox.setObjectName(u"distortionCheckBox")
 
-        self.horizontalLayout_37.addWidget(self.checkBox_4)
+        self.distortionHorizontalLayout.addWidget(self.distortionCheckBox)
 
-        self.pushButton_13 = QPushButton(self.widget)
-        self.pushButton_13.setObjectName(u"pushButton_13")
+        self.distortionCompressButton = QPushButton(self.layoutWidget)
+        self.distortionCompressButton.setObjectName(u"distortionCompressButton")
 
-        self.horizontalLayout_37.addWidget(self.pushButton_13)
+        self.distortionHorizontalLayout.addWidget(self.distortionCompressButton)
 
-        self.pushButton_14 = QPushButton(self.widget)
-        self.pushButton_14.setObjectName(u"pushButton_14")
+        self.distortionStretchButton = QPushButton(self.layoutWidget)
+        self.distortionStretchButton.setObjectName(u"distortionStretchButton")
 
-        self.horizontalLayout_37.addWidget(self.pushButton_14)
+        self.distortionHorizontalLayout.addWidget(self.distortionStretchButton)
 
-        self.pushButton_15 = QPushButton(self.widget)
-        self.pushButton_15.setObjectName(u"pushButton_15")
+        self.distortionSaveButton = QPushButton(self.layoutWidget)
+        self.distortionSaveButton.setObjectName(u"distortionSaveButton")
 
-        self.horizontalLayout_37.addWidget(self.pushButton_15)
+        self.distortionHorizontalLayout.addWidget(self.distortionSaveButton)
 
-        self.pushButton_16 = QPushButton(self.widget)
-        self.pushButton_16.setObjectName(u"pushButton_16")
-        self.pushButton_16.setEnabled(True)
-        sizePolicy.setHeightForWidth(self.pushButton_16.sizePolicy().hasHeightForWidth())
-        self.pushButton_16.setSizePolicy(sizePolicy)
-        self.pushButton_16.setMaximumSize(QSize(1000202, 16777215))
-        self.pushButton_16.setFont(font)
+        self.distortionDrawButton = QPushButton(self.layoutWidget)
+        self.distortionDrawButton.setObjectName(u"distortionDrawButton")
+        self.distortionDrawButton.setEnabled(True)
+        sizePolicy.setHeightForWidth(self.distortionDrawButton.sizePolicy().hasHeightForWidth())
+        self.distortionDrawButton.setSizePolicy(sizePolicy)
+        self.distortionDrawButton.setMaximumSize(QSize(1000202, 16777215))
+        self.distortionDrawButton.setFont(font)
 
-        self.horizontalLayout_37.addWidget(self.pushButton_16)
+        self.distortionHorizontalLayout.addWidget(self.distortionDrawButton)
 
 
-        self.verticalLayout_3.addLayout(self.horizontalLayout_37)
+        self.elementsvVerticalLayout.addLayout(self.distortionHorizontalLayout)
 
-        self.horizontalLayout_38 = QHBoxLayout()
-        self.horizontalLayout_38.setObjectName(u"horizontalLayout_38")
-        self.pushButton_19 = QPushButton(self.widget)
-        self.pushButton_19.setObjectName(u"pushButton_19")
+        self.actionsHorizontalLayout = QHBoxLayout()
+        self.actionsHorizontalLayout.setObjectName(u"actionsHorizontalLayout")
+        self.saveMaskButton = QPushButton(self.layoutWidget)
+        self.saveMaskButton.setObjectName(u"saveMaskButton")
 
-        self.horizontalLayout_38.addWidget(self.pushButton_19)
+        self.actionsHorizontalLayout.addWidget(self.saveMaskButton)
 
-        self.pushButton_17 = QPushButton(self.widget)
-        self.pushButton_17.setObjectName(u"pushButton_17")
+        self.GANSeismicButton = QPushButton(self.layoutWidget)
+        self.GANSeismicButton.setObjectName(u"GANSeismicButton")
 
-        self.horizontalLayout_38.addWidget(self.pushButton_17)
+        self.actionsHorizontalLayout.addWidget(self.GANSeismicButton)
 
 
-        self.verticalLayout_3.addLayout(self.horizontalLayout_38)
+        self.elementsvVerticalLayout.addLayout(self.actionsHorizontalLayout)
 
+        self.opacityHorizontalLayout = QHBoxLayout()
+        self.opacityHorizontalLayout.setObjectName(u"opacityHorizontalLayout")
+        self.opacityLabel = QLabel(self.layoutWidget)
+        self.opacityLabel.setObjectName(u"opacityLabel")
 
-        self.verticalLayout_4.addLayout(self.verticalLayout_3)
+        self.opacityHorizontalLayout.addWidget(self.opacityLabel)
 
-        self.horizontalLayout_39 = QHBoxLayout()
-        self.horizontalLayout_39.setObjectName(u"horizontalLayout_39")
-        self.lineEdit_41 = QLineEdit(self.widget)
-        self.lineEdit_41.setObjectName(u"lineEdit_41")
+        self.opacitySpinBox = QSpinBox(self.layoutWidget)
+        self.opacitySpinBox.setObjectName(u"opacitySpinBox")
 
-        self.horizontalLayout_39.addWidget(self.lineEdit_41)
+        self.opacityHorizontalLayout.addWidget(self.opacitySpinBox)
 
-        self.spinBox_56 = QSpinBox(self.widget)
-        self.spinBox_56.setObjectName(u"spinBox_56")
+        self.rightOpacityHorizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.horizontalLayout_39.addWidget(self.spinBox_56)
+        self.opacityHorizontalLayout.addItem(self.rightOpacityHorizontalSpacer)
 
-        self.horizontalSpacer_11 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.horizontalLayout_39.addItem(self.horizontalSpacer_11)
+        self.elementsvVerticalLayout.addLayout(self.opacityHorizontalLayout)
 
-
-        self.verticalLayout_4.addLayout(self.horizontalLayout_39)
+        self.groupBoxLayout.addWidget(self.layoutWidget)
+        self.scrollAreaLayout.addWidget(self.groupBox)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.centralLayout.addWidget(self.scrollArea)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -362,35 +377,35 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"\u0417\u0430\u0434\u0430\u0439\u0442\u0435 \u0440\u0430\u0437\u043c\u0435\u0440\u044b \u043f\u043e\u043b\u043e\u0442\u043d\u0430", None))
-        self.lineEdit.setText(QCoreApplication.translate("MainWindow", u"\u0428\u0438\u0440\u0438\u043d\u0430:", None))
-        self.lineEdit_2.setText(QCoreApplication.translate("MainWindow", u"\u0412\u044b\u0441\u043e\u0442\u0430:", None))
-        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u041f\u0440\u0438\u043c\u0435\u043d\u0438\u0442\u044c", None))
-        self.lineEdit_4.setText(QCoreApplication.translate("MainWindow", u"\u041a\u043e\u043b-\u0432\u043e \u0433\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u043e\u0432", None))
-        self.pushButton_2.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c", None))
-        self.checkBox_2.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e ", None))
-        self.pushButton_3.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0435\u0449\u0451", None))
-        self.pushButton_4.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0432\u0441\u0451", None))
-        self.pushButton_6.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", None))
-        self.pushButton_5.setText(QCoreApplication.translate("MainWindow", u"\u270d\ufe0f", None))
-        self.lineEdit_7.setText(QCoreApplication.translate("MainWindow", u"\u041a\u043e\u043b-\u0432\u043e \u0440\u0430\u0437\u043b\u043e\u043c\u043e\u0432", None))
-        self.pushButton_7.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c", None))
-        self.lineEdit_5.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0437\u0431\u0440\u043e\u0441 \u0434\u043b\u0438\u043d\u044b", None))
-        self.lineEdit_8.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0437\u0431\u0440\u043e\u0441 \u0443\u0433\u043b\u043e\u0432", None))
-        self.lineEdit_6.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0437\u0431\u0440\u043e\u0441 \u0430\u043f\u043b\u0438\u0442\u0443\u0434\u044b", None))
-        self.checkBox_3.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e ", None))
-        self.pushButton_8.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0435\u0449\u0451", None))
-        self.pushButton_9.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0432\u0441\u0451", None))
-        self.pushButton_10.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", None))
-        self.pushButton_11.setText(QCoreApplication.translate("MainWindow", u"\u270d\ufe0f", None))
-        self.lineEdit_9.setText(QCoreApplication.translate("MainWindow", u"\u0418\u0441\u043a\u0430\u0436\u0435\u043d\u0438\u0435", None))
-        self.pushButton_12.setText(QCoreApplication.translate("MainWindow", u"\u041f\u0440\u0438\u043c\u0435\u043d\u0438\u0442\u044c", None))
-        self.checkBox_4.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e ", None))
-        self.pushButton_13.setText(QCoreApplication.translate("MainWindow", u"\u0421\u0436\u0430\u0442\u044c", None))
-        self.pushButton_14.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0441\u0442\u044f\u043d\u0443\u0442\u044c", None))
-        self.pushButton_15.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", None))
-        self.pushButton_16.setText(QCoreApplication.translate("MainWindow", u"\u270d\ufe0f", None))
-        self.pushButton_19.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043c\u0430\u0441\u043a\u0443", None))
-        self.pushButton_17.setText(QCoreApplication.translate("MainWindow", u"GAN \u0421\u0435\u0439\u0441\u043c\u0438\u043a\u0430", None))
-        self.lineEdit_41.setText(QCoreApplication.translate("MainWindow", u"\u041d\u0435\u043f\u0440\u043e\u0437\u0440\u0430\u043d\u043e\u0441\u0442\u044c \u0441\u0435\u0439\u0441\u043c\u0438\u043a\u0438:", None))
+        self.WidthLabel.setText(QCoreApplication.translate("MainWindow", u"\u0428\u0438\u0440\u0438\u043d\u0430:", None))
+        self.HeightLabel.setText(QCoreApplication.translate("MainWindow", u"\u0412\u044b\u0441\u043e\u0442\u0430:", None))
+        self.canvasSizeButton.setText(QCoreApplication.translate("MainWindow", u"\u041f\u0440\u0438\u043c\u0435\u043d\u0438\u0442\u044c", None))
+        self.horizonsLabel.setText(QCoreApplication.translate("MainWindow", u"\u041a\u043e\u043b-\u0432\u043e \u0433\u043e\u0440\u0438\u0437\u043e\u043d\u0442\u043e\u0432", None))
+        self.horizonsCreateButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c", None))
+        self.horizonsCheckBox.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e ", None))
+        self.horizonsAddButton.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0435\u0449\u0451", None))
+        self.horizonsClearButton.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0432\u0441\u0451", None))
+        self.horizonsSaveButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", None))
+        self.horizonsDrawButton.setText(QCoreApplication.translate("MainWindow", u"\u270d\ufe0f", None))
+        self.lengthLabel.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0437\u0431\u0440\u043e\u0441 \u0434\u043b\u0438\u043d\u044b", None))
+        self.anglesLabel.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0437\u0431\u0440\u043e\u0441 \u0443\u0433\u043b\u043e\u0432", None))
+        self.amplitudeLabel.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0437\u0431\u0440\u043e\u0441 \u0430\u043f\u043b\u0438\u0442\u0443\u0434\u044b", None))
+        self.riftsAmountLabel.setText(QCoreApplication.translate("MainWindow", u"\u041a\u043e\u043b-\u0432\u043e \u0440\u0430\u0437\u043b\u043e\u043c\u043e\u0432", None))
+        self.riftsCreateButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c", None))
+        self.riftsCheckBox.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e ", None))
+        self.riftsAddButton.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0435\u0449\u0451", None))
+        self.riftsClearButton.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0432\u0441\u0451", None))
+        self.riftsSaveButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", None))
+        self.riftsDrawButton.setText(QCoreApplication.translate("MainWindow", u"\u270d\ufe0f", None))
+        self.distortionLabel.setText(QCoreApplication.translate("MainWindow", u"\u0418\u0441\u043a\u0430\u0436\u0435\u043d\u0438\u0435", None))
+        self.distortionApplyButton.setText(QCoreApplication.translate("MainWindow", u"\u041f\u0440\u0438\u043c\u0435\u043d\u0438\u0442\u044c", None))
+        self.distortionCheckBox.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e ", None))
+        self.distortionCompressButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u0436\u0430\u0442\u044c", None))
+        self.distortionStretchButton.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0441\u0442\u044f\u043d\u0443\u0442\u044c", None))
+        self.distortionSaveButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", None))
+        self.distortionDrawButton.setText(QCoreApplication.translate("MainWindow", u"\u270d\ufe0f", None))
+        self.saveMaskButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043c\u0430\u0441\u043a\u0443", None))
+        self.GANSeismicButton.setText(QCoreApplication.translate("MainWindow", u"GAN \u0421\u0435\u0439\u0441\u043c\u0438\u043a\u0430", None))
+        self.opacityLabel.setText(QCoreApplication.translate("MainWindow", u"\u041d\u0435\u043f\u0440\u043e\u0437\u0440\u0430\u043d\u043e\u0441\u0442\u044c \u0441\u0435\u0439\u0441\u043c\u0438\u043a\u0438:", None))
     # retranslateUi
 
