@@ -106,6 +106,31 @@ class CanvasWidget(QGraphicsView):
             self._scene.removeItem(item)
         self._committed_paths.clear()
 
+    def export_paths(self) -> List[QPainterPath]:
+        paths = [item.path() for item in self._committed_paths]
+        if len(self._points) >= 2:
+            paths.append(self._build_smooth_path(self._points))
+        return paths
+
+    def export_mask(self, width: int, height: int, include_current: bool = True) -> np.ndarray:
+        image = QImage(width, height, QImage.Format_Grayscale8)
+        image.fill(0)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        pen = QPen(QColor(255, 255, 255), 2)
+        painter.setPen(pen)
+
+        for item in self._committed_paths:
+            painter.drawPath(item.path())
+        if include_current and len(self._points) >= 2:
+            painter.drawPath(self._build_smooth_path(self._points))
+        painter.end()
+
+        ptr = image.bits()
+        ptr.setsize(height * image.bytesPerLine())
+        array = np.frombuffer(ptr, dtype=np.uint8).reshape((height, image.bytesPerLine()))
+        return array[:, :width].copy()
+
     def mousePressEvent(self, event) -> None:
         if self._drawing_mode != "off" and event.button() == Qt.LeftButton:
             pos = self.mapToScene(event.pos())
@@ -151,23 +176,73 @@ class CanvasWidget(QGraphicsView):
         else:
             self._path_item.setPath(path)
 
-    @staticmethod
-    def _build_smooth_path(points: Iterable[Point]) -> QPainterPath:
+    def _build_smooth_path(self, points: Iterable[Point]) -> QPainterPath:
         pts = [QPointF(p[0], p[1]) for p in points]
+        pts = self._extend_points_to_edges(pts)
         path = QPainterPath(pts[0])
         if len(pts) == 2:
             path.lineTo(pts[1])
             return path
 
-        # Catmull-Rom style smoothing
-        for i in range(1, len(pts) - 1):
-            p0 = pts[i - 1]
+        # Cardinal spline smoothing that passes through every point.
+        tension = 0.2
+        scale = (1.0 - tension) / 6.0
+        for i in range(len(pts) - 1):
+            p0 = pts[i - 1] if i > 0 else pts[i]
             p1 = pts[i]
             p2 = pts[i + 1]
-            control1 = QPointF(p1.x() + (p2.x() - p0.x()) / 6.0, p1.y() + (p2.y() - p0.y()) / 6.0)
-            control2 = QPointF(p2.x() - (p2.x() - p1.x()) / 6.0, p2.y() - (p2.y() - p1.y()) / 6.0)
+            p3 = pts[i + 2] if i + 2 < len(pts) else pts[i + 1]
+            control1 = QPointF(p1.x() + (p2.x() - p0.x()) * scale, p1.y() + (p2.y() - p0.y()) * scale)
+            control2 = QPointF(p2.x() - (p3.x() - p1.x()) * scale, p2.y() - (p3.y() - p1.y()) * scale)
             path.cubicTo(control1, control2, p2)
         return path
+
+    def _extend_points_to_edges(self, pts: List[QPointF]) -> List[QPointF]:
+        if len(pts) < 2:
+            return pts
+        rect = self._scene.sceneRect()
+        width = rect.width()
+        height = rect.height()
+        if width <= 0 or height <= 0:
+            return pts
+
+        first = self._ray_to_rect(pts[0], pts[1], width, height, reverse=True)
+        last = self._ray_to_rect(pts[-1], pts[-2], width, height, reverse=True)
+        extended = [first] + pts[1:-1] + [last]
+        return extended
+
+    @staticmethod
+    def _ray_to_rect(start: QPointF, next_pt: QPointF, width: float, height: float, reverse: bool) -> QPointF:
+        dx = start.x() - next_pt.x() if reverse else next_pt.x() - start.x()
+        dy = start.y() - next_pt.y() if reverse else next_pt.y() - start.y()
+        if abs(dx) < 1e-6 and abs(dy) < 1e-6:
+            return start
+
+        candidates = []
+        if abs(dx) > 1e-6:
+            t = (0.0 - start.x()) / dx
+            y = start.y() + t * dy
+            if t >= 0 and 0.0 <= y <= height - 1:
+                candidates.append((t, QPointF(0.0, y)))
+            t = ((width - 1) - start.x()) / dx
+            y = start.y() + t * dy
+            if t >= 0 and 0.0 <= y <= height - 1:
+                candidates.append((t, QPointF(width - 1, y)))
+
+        if abs(dy) > 1e-6:
+            t = (0.0 - start.y()) / dy
+            x = start.x() + t * dx
+            if t >= 0 and 0.0 <= x <= width - 1:
+                candidates.append((t, QPointF(x, 0.0)))
+            t = ((height - 1) - start.y()) / dy
+            x = start.x() + t * dx
+            if t >= 0 and 0.0 <= x <= width - 1:
+                candidates.append((t, QPointF(x, height - 1)))
+
+        if not candidates:
+            return start
+        _, point = min(candidates, key=lambda item: item[0])
+        return point
 
     @staticmethod
     def _normalize_to_uint8(data: np.ndarray) -> np.ndarray:
