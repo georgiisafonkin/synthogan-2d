@@ -2,11 +2,16 @@
 Main entry point for the synthogan-2d application.
 """
 
+import os
 import sys
+
 from PySide6.QtWidgets import QApplication
-from ui.template_ui import Ui_MainWindow
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.append(PROJECT_ROOT)
+
 from ui.main_window import MainWindow
-from PySide6.QtWidgets import QMainWindow
 
 
 # class MainWindow(QMainWindow):

@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QGraphicsView,
 )
 
-Point = Tuple[int, int]
+Point = Tuple[float, float]
 
 
 class CanvasWidget(QGraphicsView):
@@ -46,12 +46,17 @@ class CanvasWidget(QGraphicsView):
         self._scene.setSceneRect(0, 0, width, height)
 
     def set_mask(self, mask: np.ndarray) -> None:
-        pixmap = self._numpy_to_pixmap(mask)
+        pixmap = self._mask_to_pixmap(mask)
         if self._mask_item is None:
             self._mask_item = self._scene.addPixmap(pixmap)
             self._mask_item.setZValue(0)
         else:
             self._mask_item.setPixmap(pixmap)
+
+    def clear_mask(self) -> None:
+        if self._mask_item is not None:
+            self._scene.removeItem(self._mask_item)
+            self._mask_item = None
 
     def set_seismic_overlay(self, seismic: Optional[np.ndarray], opacity: float = 0.5) -> None:
         if seismic is None:
@@ -92,6 +97,15 @@ class CanvasWidget(QGraphicsView):
         self.clear_points()
         return True
 
+    def add_path_from_points(self, points: Iterable[Point]) -> None:
+        pts = list(points)
+        if len(pts) < 2:
+            return
+        path = self._build_smooth_path(pts)
+        item = self._scene.addPath(path, self._pen_path)
+        item.setZValue(2)
+        self._committed_paths.append(item)
+
     def clear_points(self) -> None:
         for item in self._point_items:
             self._scene.removeItem(item)
@@ -126,9 +140,8 @@ class CanvasWidget(QGraphicsView):
             painter.drawPath(self._build_smooth_path(self._points))
         painter.end()
 
-        ptr = image.bits()
-        ptr.setsize(height * image.bytesPerLine())
-        array = np.frombuffer(ptr, dtype=np.uint8).reshape((height, image.bytesPerLine()))
+        array = np.frombuffer(image.constBits(), dtype=np.uint8)
+        array = array.reshape((height, image.bytesPerLine()))
         return array[:, :width].copy()
 
     def mousePressEvent(self, event) -> None:
@@ -152,7 +165,7 @@ class CanvasWidget(QGraphicsView):
             last = self._points[-1]
             if abs(last[0] - x) < 2 and abs(last[1] - y) < 2:
                 return
-        self._points.append((x, y))
+        self._points.append((float(x), float(y)))
         radius = 2
         point_item = self._scene.addEllipse(
             x - radius,
@@ -262,5 +275,34 @@ class CanvasWidget(QGraphicsView):
         img = self._normalize_to_uint8(data)
         height, width = img.shape
         qimage = QImage(img.data, width, height, width, QImage.Format_Grayscale8)
+        qimage = qimage.copy()
+        return QPixmap.fromImage(qimage)
+
+    def _mask_to_pixmap(self, data: np.ndarray) -> QPixmap:
+        if data.ndim != 2:
+            raise ValueError("Only 2D arrays are supported for display.")
+        if np.issubdtype(data.dtype, np.integer) and int(np.max(data)) > 1:
+            return self._labels_to_pixmap(data.astype(np.int32))
+        return self._numpy_to_pixmap(data)
+
+    def _labels_to_pixmap(self, labels: np.ndarray) -> QPixmap:
+        height, width = labels.shape
+        max_label = int(labels.max())
+        if max_label <= 0:
+            return self._numpy_to_pixmap(labels)
+
+        # Simple HSV-like color wheel for labels with light background.
+        rgb = np.full((height, width, 3), 240, dtype=np.uint8)
+        for label in range(1, max_label + 1):
+            hue = int((label * 137.508) % 360)  # golden angle for better spread
+            sat = 160 + (label * 37) % 80
+            val = 200 + (label * 53) % 55
+            color = QColor()
+            color.setHsv(hue, sat, val)
+            mask = labels == label
+            if mask.any():
+                rgb[mask] = [color.red(), color.green(), color.blue()]
+
+        qimage = QImage(rgb.data, width, height, width * 3, QImage.Format_RGB888)
         qimage = qimage.copy()
         return QPixmap.fromImage(qimage)

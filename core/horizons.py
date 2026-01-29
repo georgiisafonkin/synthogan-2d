@@ -12,6 +12,8 @@ import numpy as np
 from scipy.interpolate import griddata
 from scipy.ndimage import gaussian_filter, gaussian_filter1d
 
+from core.params import HorizonParams
+
 Point = Tuple[float, float]
 Horizon = List[Point]
 
@@ -163,22 +165,6 @@ def generate_perlin_like_noise(nx: int, ny: int, octave: float = 2.0,
 
 def vertical_weight(y_norm: float) -> float:
     return float(np.exp(-y_norm * 3.0))
-
-
-# ----------------------------
-# 4) Улучшение: запрет пересечений + min_gap
-# ----------------------------
-@dataclass(frozen=True)
-class HorizonParams:
-    W: float
-    H: float
-    num_horizons: int
-    nx: int
-    min_thickness: float
-    max_thickness: float
-    deformation_amplitude: float
-    seed: Optional[int] = None
-    min_gap: Optional[float] = None  # если None -> берём min_thickness
 
 
 def _enforce_no_crossing(Y: np.ndarray, min_gap: float, smooth_sigma: float = 6.0) -> Tuple[np.ndarray, np.ndarray]:
