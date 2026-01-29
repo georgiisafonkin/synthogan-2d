@@ -119,18 +119,25 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Drawing mode: {mode}.", 3000)
 
     def _add_stroke(self, element_type: str) -> None:
-        if not self.canvas.commit_path():
+        points = self.canvas.get_points()
+        if len(points) < 2:
             self.statusBar().showMessage("No points to add.", 3000)
             return
-        self._strokes[element_type].append([])
+        self.canvas.commit_path(tag=element_type)
+        self._strokes[element_type].append(points)
+        if element_type == "horizons":
+            self._last_horizons = list(self._strokes["horizons"])
         self.statusBar().showMessage(f"Added {element_type} stroke.", 3000)
 
     def _clear_strokes(self, element_type: str) -> None:
         self._strokes[element_type].clear()
         if self._drawing_mode == element_type:
             self.canvas.clear_points()
-        self.canvas.clear_committed_paths()
-        self.canvas.clear_mask()
+        self.canvas.clear_committed_paths(tag=element_type)
+        if element_type == "horizons":
+            self.canvas.clear_mask()
+        if element_type == "horizons":
+            self._last_horizons = []
         self.statusBar().showMessage(f"Cleared {element_type} strokes.", 3000)
 
     def _save_placeholder(self, element_type: str) -> None:
@@ -213,7 +220,7 @@ class MainWindow(QMainWindow):
         self.canvas.clear_points()
         self.canvas.clear_committed_paths()
         for horizon in horizons:
-            self.canvas.add_path_from_points(horizon)
+            self.canvas.add_path_from_points(horizon, tag="horizons")
 
         self.statusBar().showMessage(
             f"Generated {len(horizons)} horizons. nx={nx}, min_gap={min_gap:.1f}, amp={deformation_amplitude:.1f}",
@@ -292,9 +299,9 @@ class MainWindow(QMainWindow):
         self.canvas.clear_points()
         self.canvas.clear_committed_paths()
         for horizon in faulted_horizons:
-            self.canvas.add_path_from_points(horizon)
+            self.canvas.add_path_from_points(horizon, tag="horizons")
         # for p1, p2 in lines:
-        #     self.canvas.add_path_from_points([p1, p2])
+        #     self.canvas.add_path_from_points([p1, p2], tag="faults")
 
         self._last_horizons = faulted_horizons
         self._last_mask = self.canvas.export_mask(width, height, include_current=False)

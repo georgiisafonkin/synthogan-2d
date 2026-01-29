@@ -405,7 +405,7 @@ class Ui_MainWindow(object):
         self.distortionStretchButton.setText(QCoreApplication.translate("MainWindow", u"\u0420\u0430\u0441\u0442\u044f\u043d\u0443\u0442\u044c", None))
         self.distortionSaveButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", None))
         self.distortionDrawButton.setText(QCoreApplication.translate("MainWindow", u"\u270d\ufe0f", None))
-        self.saveMaskButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043c\u0430\u0441\u043a\u0443", None))
+        self.saveMaskButton.setText(QCoreApplication.translate("MainWindow", "Наложить маску", None))
         self.GANSeismicButton.setText(QCoreApplication.translate("MainWindow", u"GAN \u0421\u0435\u0439\u0441\u043c\u0438\u043a\u0430", None))
         self.opacityLabel.setText(QCoreApplication.translate("MainWindow", u"\u041d\u0435\u043f\u0440\u043e\u0437\u0440\u0430\u043d\u043e\u0441\u0442\u044c \u0441\u0435\u0439\u0441\u043c\u0438\u043a\u0438:", None))
     # retranslateUi

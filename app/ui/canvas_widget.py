@@ -34,6 +34,7 @@ class CanvasWidget(QGraphicsView):
         self._path_item: Optional[QGraphicsPathItem] = None
         self._point_items: List[QGraphicsEllipseItem] = []
         self._committed_paths: List[QGraphicsPathItem] = []
+        self._committed_paths_by_tag: dict[str, List[QGraphicsPathItem]] = {}
         self._points: List[Point] = []
         self._drawing_mode: str = "off"
 
@@ -87,17 +88,19 @@ class CanvasWidget(QGraphicsView):
         self.clear_points()
         return points
 
-    def commit_path(self) -> bool:
+    def commit_path(self, tag: Optional[str] = None) -> bool:
         if len(self._points) < 2:
             return False
         path = self._build_smooth_path(self._points)
         item = self._scene.addPath(path, self._pen_path)
         item.setZValue(2)
         self._committed_paths.append(item)
+        if tag is not None:
+            self._committed_paths_by_tag.setdefault(tag, []).append(item)
         self.clear_points()
         return True
 
-    def add_path_from_points(self, points: Iterable[Point]) -> None:
+    def add_path_from_points(self, points: Iterable[Point], tag: Optional[str] = None) -> None:
         pts = list(points)
         if len(pts) < 2:
             return
@@ -105,6 +108,8 @@ class CanvasWidget(QGraphicsView):
         item = self._scene.addPath(path, self._pen_path)
         item.setZValue(2)
         self._committed_paths.append(item)
+        if tag is not None:
+            self._committed_paths_by_tag.setdefault(tag, []).append(item)
 
     def clear_points(self) -> None:
         for item in self._point_items:
@@ -115,10 +120,21 @@ class CanvasWidget(QGraphicsView):
             self._scene.removeItem(self._path_item)
             self._path_item = None
 
-    def clear_committed_paths(self) -> None:
-        for item in self._committed_paths:
+    def clear_committed_paths(self, tag: Optional[str] = None) -> None:
+        if tag is None:
+            for item in self._committed_paths:
+                self._scene.removeItem(item)
+            self._committed_paths.clear()
+            self._committed_paths_by_tag.clear()
+            return
+
+        items = self._committed_paths_by_tag.pop(tag, [])
+        if not items:
+            return
+        for item in items:
+            if item in self._committed_paths:
+                self._committed_paths.remove(item)
             self._scene.removeItem(item)
-        self._committed_paths.clear()
 
     def export_paths(self) -> List[QPainterPath]:
         paths = [item.path() for item in self._committed_paths]
