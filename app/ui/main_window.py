@@ -210,6 +210,11 @@ class MainWindow(QMainWindow):
 
         # deformation tied to thickness (prevents “too steep”)
         deformation_amplitude = max(2.0, min(0.35 * min_thickness, 0.75 * min_thickness))
+        dialog_amp = Dialogs.deformation_amplitude_dialog(self, amplitude=deformation_amplitude)
+        if dialog_amp is None:
+            self.statusBar().showMessage("Horizons generation cancelled.", 3000)
+            return
+        deformation_amplitude = float(dialog_amp)
 
         # enforce non-crossing / spacing
         min_gap = max(2.0, 0.6 * min_thickness)
@@ -343,8 +348,6 @@ class MainWindow(QMainWindow):
 
         dialog_result = Dialogs.fault_params_dialog(
             self,
-            length=length,
-            angle_deg=angle_deg,
             throw=throw_default,
             sigma_cross=sigma_default,
             along_power=power_default,
@@ -353,7 +356,7 @@ class MainWindow(QMainWindow):
         if dialog_result is None:
             return
 
-        length, angle_deg, throw, sigma_cross, uplift_side, along_power = dialog_result
+        throw, sigma_cross, uplift_side, along_power = dialog_result
 
         if hasattr(faults_core, "FaultFromSegment"):
             FaultFromSegment = getattr(faults_core, "FaultFromSegment")
