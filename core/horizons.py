@@ -17,7 +17,7 @@ Horizon = List[Point]
 
 
 # ----------------------------
-# 1) Halton (2D, bases 2 and 3) — как в улучшенной версии
+# 1) Halton (2D, bases 2 and 3)
 # ----------------------------
 def halton_sequence_2d(nbpts: int) -> np.ndarray:
     h = np.empty((nbpts, 2), dtype=float)
@@ -37,7 +37,7 @@ def halton_sequence_2d(nbpts: int) -> np.ndarray:
 
 
 # ----------------------------
-# 2) Plane fitting / dipping plane — оставлено по твоей логике
+# 2) Plane fitting / dipping plane
 # ----------------------------
 def _fit_plane_lsq(xyz: np.ndarray) -> Tuple[float, float, float]:
     rows = xyz.shape[0]
@@ -199,7 +199,7 @@ def _enforce_no_crossing(Y: np.ndarray, min_gap: float, smooth_sigma: float = 6.
 
 
 # ----------------------------
-# 5) ТВОЯ generate_horizons, но с улучшениями (dataclass, rng, NaN-fill, no-crossing)
+# generate_horizons, но с улучшениями (dataclass, rng, NaN-fill, no-crossing)
 # ----------------------------
 def generate_horizons(params: HorizonParams) -> List[Horizon]:
     # RNG (улучшение)
@@ -217,7 +217,7 @@ def generate_horizons(params: HorizonParams) -> List[Horizon]:
 
     min_gap = float(params.min_gap) if params.min_gap is not None else float(params.min_thickness)
 
-    # толщины (оставлено как у тебя, но через rng)
+    # толщины rng ? 
     thicknesses = rng.gamma(shape=4.0, scale=2.0, size=num_h)
     tmin, tmax = float(thicknesses.min()), float(thicknesses.max())
     if abs(tmax - tmin) < 1e-12:
