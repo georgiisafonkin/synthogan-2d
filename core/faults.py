@@ -508,4 +508,4 @@ def generate_and_apply_faults(
         H=H,
         faults=faults_all,
         return_specs=return_specs,
-    ) 
+    )
