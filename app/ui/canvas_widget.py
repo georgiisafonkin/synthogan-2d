@@ -42,6 +42,8 @@ class CanvasWidget(QGraphicsView):
         self._pen_points = QPen(QColor(255, 160, 0), 2)
         self._brush_points = QBrush(QColor(255, 160, 0))
         self.setMouseTracking(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def set_canvas_size(self, width: int, height: int) -> None:
         self._scene.setSceneRect(0, 0, width, height)

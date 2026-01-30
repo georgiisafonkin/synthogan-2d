@@ -6,12 +6,22 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple, cast
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMainWindow
 
 from core.params import HorizonParams
 import numpy as np
 from core.labeling import horizons_to_layer_labels
-from core.faults import FaultGenParams, FaultSpec, fault_lines_from_specs, generate_and_apply_faults
+import core.faults as faults_core
+from core.faults import (
+    FaultGenParams,
+    FaultParams,
+    FaultSpec,
+    _build_spec,
+    apply_faults,
+    fault_lines_from_specs,
+    generate_and_apply_faults,
+)
 
 from .canvas_widget import CanvasWidget
 from .dialogs import Dialogs
@@ -48,6 +58,7 @@ class MainWindow(QMainWindow):
         layout.removeWidget(self.ui.canvasGraphicsView)
         self.ui.canvasGraphicsView.setParent(None)
         layout.insertWidget(index, self.canvas)
+        layout.setAlignment(self.canvas, Qt.AlignmentFlag.AlignCenter)
 
     def _setup_controls(self) -> None:
         self.ui.widthSpinBox.setRange(64, 4096)
@@ -122,6 +133,9 @@ class MainWindow(QMainWindow):
         points = self.canvas.get_points()
         if len(points) < 2:
             self.statusBar().showMessage("No points to add.", 3000)
+            return
+        if element_type == "faults":
+            self._add_manual_fault(points)
             return
         self.canvas.commit_path(tag=element_type)
         self._strokes[element_type].append(points)
@@ -306,3 +320,96 @@ class MainWindow(QMainWindow):
         self._last_horizons = faulted_horizons
         self._last_mask = self.canvas.export_mask(width, height, include_current=False)
         self.statusBar().showMessage(f"Generated {len(lines)} faults.", 3000)
+
+    def _add_manual_fault(self, points: List[Point]) -> None:
+        if not self._last_horizons:
+            self.statusBar().showMessage("Generate or draw horizons first.", 3000)
+            return
+
+        width = int(self.ui.widthSpinBox.value())
+        height = int(self.ui.heightSpinBox.value())
+        W = max(2.0, float(width))
+        H = max(2.0, float(height))
+
+        p0 = points[0]
+        p1 = points[-1]
+        dx = p1[0] - p0[0]
+        dy = p1[1] - p0[1]
+        length = max(1.0, float(np.hypot(dx, dy)))
+        angle_deg = float(np.degrees(np.arctan2(dy, dx)))
+        throw_default = float(self.ui.amplitudeFromSpinBox.value())
+        sigma_default = max(1.0, 0.12 * float(length))
+        power_default = 1.5
+
+        dialog_result = Dialogs.fault_params_dialog(
+            self,
+            length=length,
+            angle_deg=angle_deg,
+            throw=throw_default,
+            sigma_cross=sigma_default,
+            along_power=power_default,
+        )
+        self.canvas.clear_points()
+        if dialog_result is None:
+            return
+
+        length, angle_deg, throw, sigma_cross, uplift_side, along_power = dialog_result
+
+        if hasattr(faults_core, "FaultFromSegment"):
+            FaultFromSegment = getattr(faults_core, "FaultFromSegment")
+            manual_faults = [
+                FaultFromSegment(
+                    p1=(float(p0[0]), float(p0[1])),
+                    p2=(float(p1[0]), float(p1[1])),
+                    uplift_side=uplift_side,
+                    throw=float(throw),
+                    sigma_cross=float(sigma_cross) if sigma_cross > 0.0 else None,
+                    along_power=float(along_power),
+                )
+            ]
+            try:
+                faulted_horizons, specs = generate_and_apply_faults(
+                    horizons=self._last_horizons,
+                    W=W,
+                    H=H,
+                    gen=None,
+                    manual_faults=manual_faults,
+                    return_specs=True,
+                )
+                specs = cast(List[FaultSpec], specs)
+                self.canvas.clear_committed_paths(tag="horizons")
+                for horizon in faulted_horizons:
+                    self.canvas.add_path_from_points(horizon, tag="horizons")
+
+                self._last_horizons = faulted_horizons
+                self.statusBar().showMessage("Manual fault applied.", 3000)
+                return
+            except TypeError:
+                pass
+        cx = float((p0[0] + p1[0]) / 2.0)
+        cy = float((p0[1] + p1[1]) / 2.0)
+        fp = FaultParams(
+            center=(cx, cy),
+            length=float(length),
+            angle_deg=float(angle_deg),
+            uplift_side=uplift_side,
+            throw=float(throw),
+            sigma_cross=float(sigma_cross) if sigma_cross > 0.0 else None,
+            along_power=float(along_power),
+        )
+
+        faulted = apply_faults(
+            horizons=self._last_horizons,
+            W=W,
+            H=H,
+            faults=fp,
+            return_specs=False,
+        )
+        spec = _build_spec(fp)
+
+        self.canvas.clear_committed_paths(tag="horizons")
+        for horizon in faulted:
+            self.canvas.add_path_from_points(horizon, tag="horizons")
+
+        self._last_horizons = faulted
+        self.statusBar().showMessage("Manual fault applied.", 3000)
