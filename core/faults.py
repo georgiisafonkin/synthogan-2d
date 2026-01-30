@@ -447,6 +447,41 @@ def generate_and_apply_faults(
     gen: FaultGenParams,
     seed: Optional[int] = None,
     return_specs: bool = False,
+<<<<<<< HEAD
+    manual_faults: Optional[List[Union["FaultParams", FaultFromSegment]]] = None,
+) -> Union[Horizons, Tuple[Horizons, List["FaultSpec"]]]:
+    """
+      - gen != None  -> добавляем N случайных разломов (seed фиксирует их)
+      - manual_faults -> добавляем ручные разломы (FaultParams или FaultFromSegment)
+      - применяем все разломы вместе
+      - если gen=None и manual_faults=None -> просто вернёт исходные горизонты (и пустые specs при return_specs)
+    """
+    faults_all: List[FaultParams] = []
+
+    # случайные разломы
+    if gen is not None and int(gen.num_faults) > 0:
+        faults_all.extend(generate_faults_random(W=W, H=H, gen=gen, seed=seed))
+
+    # ручные разломы
+    if manual_faults:
+        for f in manual_faults:
+            if isinstance(f, FaultFromSegment):
+                faults_all.append(faultparams_from_segment(f))
+            else:
+                faults_all.append(f)
+
+    if not faults_all:
+        return (horizons, []) if return_specs else horizons
+
+    return apply_faults(
+        horizons=horizons,
+        W=W,
+        H=H,
+        faults=faults_all,
+        return_specs=return_specs,
+    )
+=======
 ) -> Union[Horizons, Tuple[Horizons, List[FaultSpec]]]:
     faults = generate_faults_random(W=W, H=H, gen=gen, seed=seed)
     return apply_faults(horizons=horizons, W=W, H=H, faults=faults, return_specs=return_specs)
+>>>>>>> 245f2a60718f1bcf259239e4daae0f86f7501b68
