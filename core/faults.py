@@ -43,57 +43,27 @@ class FaultSpec:
 @dataclass(frozen=True)
 class FaultGenParams:
     num_faults: int
-    # диапазоны для центров 
-    x_range: Tuple[float, float]    
-    y_range: Tuple[float, float]    
+
+    # диапазоны для центров (можно задавать в долях W/H)
+    x_range: Tuple[float, float]     # например (0.15*W, 0.85*W)
+    y_range: Tuple[float, float]     # например (0.15*H, 0.85*H)
+
     # диапазоны для геометрии
-    length_range: Tuple[float, float]   
-    angle_range_deg: Tuple[float, float] 
+    length_range: Tuple[float, float]    # например (0.25*H, 1.00*H)
+    angle_range_deg: Tuple[float, float] # например (70, 90) для крутых
+
     # диапазоны для смещения/затуханий
-    throw_range: Tuple[float, float]    
+    throw_range: Tuple[float, float]     # например (20, 80)
     sigma_cross: Optional[float] = None  # если None -> 0.12*length
     along_power_range: Tuple[float, float] = (1.0, 2.5)
 
     # какая сторона смещается (можно фиксировать или случайно)
     uplift_side: Union[Side, Literal["random"]] = "random"
 
-    # защиты от пересечений
+    # защиты от пересечений и "слишком близко"
     min_fault_separation: float = 30.0
     max_tries_per_fault: int = 2000
 
-@dataclass(frozen=True)
-class FaultFromSegment:
-    p1: Point
-    p2: Point
-    uplift_side: Side
-    throw: float
-    sigma_cross: Optional[float] = None
-    along_power: float = 1.0
-
-
-def faultparams_from_segment(seg: FaultFromSegment) -> "FaultParams":
-    x1, y1 = float(seg.p1[0]), float(seg.p1[1])
-    x2, y2 = float(seg.p2[0]), float(seg.p2[1])
-
-    cx = 0.5 * (x1 + x2)
-    cy = 0.5 * (y1 + y2)
-
-    dx = x2 - x1
-    dy = y2 - y1
-    length = float(np.hypot(dx, dy))
-
-    # угол в градусах: 0 вправо (+X), 90 вниз (+Y) — как у тебя
-    angle_deg = float(np.degrees(np.arctan2(dy, dx)))
-
-    return FaultParams(
-        center=(cx, cy),
-        length=length,
-        angle_deg=angle_deg,
-        uplift_side=seg.uplift_side,
-        throw=float(seg.throw),
-        sigma_cross=seg.sigma_cross,
-        along_power=float(seg.along_power),
-    )
 
 # ===============
 # 3) Геометрия 
@@ -474,38 +444,9 @@ def generate_and_apply_faults(
     horizons: Horizons,
     W: float,
     H: float,
-    gen: Optional["FaultGenParams"] = None,
+    gen: FaultGenParams,
     seed: Optional[int] = None,
     return_specs: bool = False,
-    manual_faults: Optional[List[Union["FaultParams", FaultFromSegment]]] = None,
-) -> Union[Horizons, Tuple[Horizons, List["FaultSpec"]]]:
-    """
-      - gen != None  -> добавляем N случайных разломов (seed фиксирует их)
-      - manual_faults -> добавляем ручные разломы (FaultParams или FaultFromSegment)
-      - применяем все разломы вместе
-      - если gen=None и manual_faults=None -> просто вернёт исходные горизонты (и пустые specs при return_specs)
-    """
-    faults_all: List[FaultParams] = []
-
-    # случайные разломы
-    if gen is not None and int(gen.num_faults) > 0:
-        faults_all.extend(generate_faults_random(W=W, H=H, gen=gen, seed=seed))
-
-    # ручные разломы
-    if manual_faults:
-        for f in manual_faults:
-            if isinstance(f, FaultFromSegment):
-                faults_all.append(faultparams_from_segment(f))
-            else:
-                faults_all.append(f)
-
-    if not faults_all:
-        return (horizons, []) if return_specs else horizons
-
-    return apply_faults(
-        horizons=horizons,
-        W=W,
-        H=H,
-        faults=faults_all,
-        return_specs=return_specs,
-    ) 
+) -> Union[Horizons, Tuple[Horizons, List[FaultSpec]]]:
+    faults = generate_faults_random(W=W, H=H, gen=gen, seed=seed)
+    return apply_faults(horizons=horizons, W=W, H=H, faults=faults, return_specs=return_specs)
