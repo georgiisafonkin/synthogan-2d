@@ -12,13 +12,10 @@ from PySide6.QtWidgets import QMainWindow
 from core.params import HorizonParams
 import numpy as np
 from core.labeling import horizons_to_layer_labels
-import core.faults as faults_core
 from core.faults import (
     FaultGenParams,
-    FaultParams,
+    FaultFromSegment,
     FaultSpec,
-    _build_spec,
-    apply_faults,
     fault_lines_from_specs,
     generate_and_apply_faults,
 )
@@ -75,21 +72,46 @@ class MainWindow(QMainWindow):
         self.ui.riftsDrawButton.clicked.connect(lambda: self._set_drawing_mode("faults"))
         self.ui.distortionDrawButton.clicked.connect(lambda: self._set_drawing_mode("distortions"))
 
+        draw_size = 36
+        self.ui.horizonsDrawButton.setFixedSize(draw_size, draw_size)
+        self.ui.riftsDrawButton.setFixedSize(draw_size, draw_size)
+        self.ui.distortionDrawButton.setFixedSize(draw_size, draw_size)
+
         self.ui.horizonsAddButton.clicked.connect(lambda: self._add_stroke("horizons"))
         self.ui.riftsAddButton.clicked.connect(lambda: self._add_stroke("faults"))
         self.ui.distortionCompressButton.clicked.connect(lambda: self._add_stroke("distortions"))
+
+        add_size = 120
+        self.ui.horizonsAddButton.setFixedSize(add_size, 32)
+        self.ui.riftsAddButton.setFixedSize(add_size, 32)
+        self.ui.distortionCompressButton.setFixedSize(add_size, 32)
 
         self.ui.horizonsClearButton.clicked.connect(lambda: self._clear_strokes("horizons"))
         self.ui.riftsClearButton.clicked.connect(lambda: self._clear_strokes("faults"))
         self.ui.distortionStretchButton.clicked.connect(lambda: self._clear_strokes("distortions"))
 
+        clear_size = 120
+        self.ui.horizonsClearButton.setFixedSize(clear_size, 32)
+        self.ui.riftsClearButton.setFixedSize(clear_size, 32)
+        self.ui.distortionStretchButton.setFixedSize(clear_size, 32)
+
         self.ui.horizonsCreateButton.clicked.connect(self._generate_horizons_auto)
         self.ui.riftsCreateButton.clicked.connect(self._generate_faults_auto)
         self.ui.distortionApplyButton.clicked.connect(lambda: self._show_placeholder("Auto distortions not implemented in UI-only mode."))
 
+        create_size = 120
+        self.ui.horizonsCreateButton.setFixedSize(create_size, 32)
+        self.ui.riftsCreateButton.setFixedSize(create_size, 32)
+        self.ui.distortionApplyButton.setFixedSize(create_size, 32)
+
         self.ui.horizonsSaveButton.clicked.connect(lambda: self._save_placeholder("horizons"))
         self.ui.riftsSaveButton.clicked.connect(lambda: self._save_placeholder("faults"))
         self.ui.distortionSaveButton.clicked.connect(lambda: self._save_placeholder("distortions"))
+
+        save_size = 120
+        self.ui.horizonsSaveButton.setFixedSize(save_size, 32)
+        self.ui.riftsSaveButton.setFixedSize(save_size, 32)
+        self.ui.distortionSaveButton.setFixedSize(save_size, 32)
 
         self.ui.saveMaskButton.clicked.connect(self._save_mask_placeholder)
         self.ui.GANSeismicButton.clicked.connect(lambda: self._show_placeholder("GAN inference not available in UI-only mode."))
@@ -101,7 +123,35 @@ class MainWindow(QMainWindow):
         self.ui.distortionCheckBox.toggled.connect(self._update_manual_controls)
         self._update_manual_controls()
 
+        self._fix_manual_checkboxes()
+        self._fix_label_sizes()
         self._apply_canvas_size()
+
+    def _fix_manual_checkboxes(self) -> None:
+        checkboxes = [
+            self.ui.horizonsCheckBox,
+            self.ui.riftsCheckBox,
+            self.ui.distortionCheckBox,
+        ]
+        max_width = max(cb.sizeHint().width() for cb in checkboxes)
+        max_height = max(cb.sizeHint().height() for cb in checkboxes)
+        for cb in checkboxes:
+            cb.setFixedSize(max_width, max_height)
+
+    def _fix_label_sizes(self) -> None:
+        labels = [
+            self.ui.horizonsLabel,
+            self.ui.lengthLabel,
+            self.ui.anglesLabel,
+            self.ui.amplitudeLabel,
+            self.ui.riftsAmountLabel,
+            self.ui.distortionLabel,
+            self.ui.opacityLabel,
+        ]
+        max_width = max(label.sizeHint().width() for label in labels)
+        max_height = max(label.sizeHint().height() for label in labels)
+        for label in labels:
+            label.setFixedSize(max_width, max_height)
 
     def _update_manual_controls(self) -> None:
         horizons_enabled = self.ui.horizonsCheckBox.isChecked()
@@ -358,61 +408,32 @@ class MainWindow(QMainWindow):
 
         throw, sigma_cross, uplift_side, along_power = dialog_result
 
-        if hasattr(faults_core, "FaultFromSegment"):
-            FaultFromSegment = getattr(faults_core, "FaultFromSegment")
-            manual_faults = [
-                FaultFromSegment(
-                    p1=(float(p0[0]), float(p0[1])),
-                    p2=(float(p1[0]), float(p1[1])),
-                    uplift_side=uplift_side,
-                    throw=float(throw),
-                    sigma_cross=float(sigma_cross) if sigma_cross > 0.0 else None,
-                    along_power=float(along_power),
-                )
-            ]
-            try:
-                faulted_horizons, specs = generate_and_apply_faults(
-                    horizons=self._last_horizons,
-                    W=W,
-                    H=H,
-                    gen=None,
-                    manual_faults=manual_faults,
-                    return_specs=True,
-                )
-                specs = cast(List[FaultSpec], specs)
-                self.canvas.clear_committed_paths(tag="horizons")
-                for horizon in faulted_horizons:
-                    self.canvas.add_path_from_points(horizon, tag="horizons")
-
-                self._last_horizons = faulted_horizons
-                self.statusBar().showMessage("Manual fault applied.", 3000)
-                return
-            except TypeError:
-                pass
-        cx = float((p0[0] + p1[0]) / 2.0)
-        cy = float((p0[1] + p1[1]) / 2.0)
-        fp = FaultParams(
-            center=(cx, cy),
-            length=float(length),
-            angle_deg=float(angle_deg),
-            uplift_side=uplift_side,
-            throw=float(throw),
-            sigma_cross=float(sigma_cross) if sigma_cross > 0.0 else None,
-            along_power=float(along_power),
-        )
-
-        faulted = apply_faults(
+        manual_faults = [
+            FaultFromSegment(
+                p1=(float(p0[0]), float(p0[1])),
+                p2=(float(p1[0]), float(p1[1])),
+                uplift_side=uplift_side,
+                throw=float(throw),
+                sigma_cross=float(sigma_cross) if sigma_cross > 0.0 else None,
+                along_power=float(along_power),
+            )
+        ]
+        faulted_horizons, specs = generate_and_apply_faults(
             horizons=self._last_horizons,
             W=W,
             H=H,
-            faults=fp,
-            return_specs=False,
+            gen=None,
+            manual_faults=manual_faults,
+            return_specs=True,
         )
-        spec = _build_spec(fp)
+        specs = cast(List[FaultSpec], specs)
+        lines = fault_lines_from_specs(specs)
 
         self.canvas.clear_committed_paths(tag="horizons")
-        for horizon in faulted:
+        for horizon in faulted_horizons:
             self.canvas.add_path_from_points(horizon, tag="horizons")
+        for p1l, p2l in lines:
+            self.canvas.add_path_from_points([p1l, p2l], tag="faults", pen=self.canvas.fault_pen())
 
-        self._last_horizons = faulted
+        self._last_horizons = faulted_horizons
         self.statusBar().showMessage("Manual fault applied.", 3000)

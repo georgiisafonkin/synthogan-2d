@@ -41,6 +41,7 @@ class CanvasWidget(QGraphicsView):
         self._pen_path = QPen(QColor(0, 180, 255), 2)
         self._pen_points = QPen(QColor(255, 160, 0), 2)
         self._brush_points = QBrush(QColor(255, 160, 0))
+        self._pen_fault = QPen(QColor(220, 50, 50), 2, Qt.PenStyle.DashLine)
         self.setMouseTracking(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -102,12 +103,17 @@ class CanvasWidget(QGraphicsView):
         self.clear_points()
         return True
 
-    def add_path_from_points(self, points: Iterable[Point], tag: Optional[str] = None) -> None:
+    def add_path_from_points(
+        self,
+        points: Iterable[Point],
+        tag: Optional[str] = None,
+        pen: Optional[QPen] = None,
+    ) -> None:
         pts = list(points)
         if len(pts) < 2:
             return
         path = self._build_smooth_path(pts)
-        item = self._scene.addPath(path, self._pen_path)
+        item = self._scene.addPath(path, pen or self._pen_path)
         item.setZValue(2)
         self._committed_paths.append(item)
         if tag is not None:
@@ -324,3 +330,6 @@ class CanvasWidget(QGraphicsView):
         qimage = QImage(rgb.data, width, height, width * 3, QImage.Format_RGB888)
         qimage = qimage.copy()
         return QPixmap.fromImage(qimage)
+
+    def fault_pen(self) -> QPen:
+        return self._pen_fault
