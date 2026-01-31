@@ -1,6 +1,6 @@
 # synthogan-2d
 
-![logo](logo.png)
+![logo](logo.jpg)
 
 ## Описание
 
