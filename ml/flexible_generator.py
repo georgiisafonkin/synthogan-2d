@@ -125,7 +125,7 @@ def main():
     # --------------------------------------------------------
     # 2. ЗАГРУЗКА И ПОВОРОТ МАСКИ
     # --------------------------------------------------------
-    mask_path = "test_inference_masks/mask_inline_25.npy"
+    mask_path = "test_masks/mask_T_0070.npy"
 
     full_mask = np.load(mask_path).astype(np.float32)
 

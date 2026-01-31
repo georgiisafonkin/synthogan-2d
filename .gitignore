@@ -49,9 +49,9 @@ Thumbs.db
 *.ckpt
 *.pth
 *.pkl
-*.npy
+#*.npy
 !demo/*.npy
-!core/io_npy.py
+!core/io_npy.pySS
 
 # Logs
 *.log
