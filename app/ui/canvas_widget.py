@@ -64,11 +64,9 @@ class CanvasWidget(QGraphicsView):
 
     def set_seismic_overlay(self, seismic: Optional[np.ndarray], opacity: float = 0.5) -> None:
         if seismic is None:
-            if self._seismic_item is not None:
-                self._scene.removeItem(self._seismic_item)
-                self._seismic_item = None
+            self.clear_seismic_overlay()
             return
-        pixmap = self._numpy_to_pixmap(seismic)
+        pixmap = self._seismic_to_pixmap(seismic)
         if self._seismic_item is None:
             self._seismic_item = self._scene.addPixmap(pixmap)
             self._seismic_item.setZValue(1)
@@ -79,6 +77,11 @@ class CanvasWidget(QGraphicsView):
     def set_seismic_opacity(self, opacity: float) -> None:
         if self._seismic_item is not None:
             self._seismic_item.setOpacity(opacity)
+
+    def clear_seismic_overlay(self) -> None:
+        if self._seismic_item is not None:
+            self._scene.removeItem(self._seismic_item)
+            self._seismic_item = None
 
     def set_drawing_mode(self, mode: str) -> None:
         self._drawing_mode = mode
@@ -299,6 +302,36 @@ class CanvasWidget(QGraphicsView):
         img = self._normalize_to_uint8(data)
         height, width = img.shape
         qimage = QImage(img.data, width, height, width, QImage.Format_Grayscale8)
+        qimage = qimage.copy()
+        return QPixmap.fromImage(qimage)
+
+    def _seismic_to_pixmap(self, data: np.ndarray) -> QPixmap:
+        if data.ndim != 2:
+            raise ValueError("Only 2D arrays are supported for display.")
+        data = data.astype(np.float32)
+        max_abs = float(np.max(np.abs(data)))
+        if max_abs < 1e-6:
+            return self._numpy_to_pixmap(data)
+
+        # Normalize to [0, 1] and map with matplotlib's "seismic" colormap.
+        norm = np.clip((data / max_abs + 1.0) * 0.5, 0.0, 1.0)
+        height, width = norm.shape
+        try:
+            import matplotlib.cm as cm  # local import to avoid hard dependency at import time
+
+            cmap = cm.get_cmap("seismic")
+            rgba = cmap(norm, bytes=True)  # (H, W, 4) uint8
+            rgb = rgba[..., :3]
+        except Exception:
+            # Fallback: simple red-blue ramp if matplotlib not available.
+            rgb = np.zeros((height, width, 3), dtype=np.uint8)
+            pos = norm >= 0.5
+            neg = ~pos
+            rgb[..., 0] = np.where(pos, ((norm - 0.5) * 2.0 * 255).astype(np.uint8), 0)
+            rgb[..., 2] = np.where(neg, ((0.5 - norm) * 2.0 * 255).astype(np.uint8), 0)
+
+        rgb = np.ascontiguousarray(rgb)
+        qimage = QImage(rgb.data, width, height, width * 3, QImage.Format_RGB888)
         qimage = qimage.copy()
         return QPixmap.fromImage(qimage)
 

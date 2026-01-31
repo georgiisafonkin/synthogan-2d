@@ -6,6 +6,9 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple, cast
 
+import os
+
+import tensorflow as tf
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMainWindow
 
@@ -19,6 +22,8 @@ from core.faults import (
     fault_lines_from_specs,
     generate_and_apply_faults,
 )
+
+from ml.flexible_generator import infer_full_adaptive, mask_to_onehot
 
 from .canvas_widget import CanvasWidget
 from .dialogs import Dialogs
@@ -47,6 +52,8 @@ class MainWindow(QMainWindow):
         }
         self._last_horizons = []
         self._last_mask: Optional[np.ndarray] = None
+        self._gan_model = None
+        self._seismic_overlay: Optional[np.ndarray] = None
         self._drawing_mode = "off"
 
     def _replace_canvas(self) -> None:
@@ -114,7 +121,7 @@ class MainWindow(QMainWindow):
         self.ui.distortionSaveButton.setFixedSize(save_size, 32)
 
         self.ui.saveMaskButton.clicked.connect(self._save_mask_placeholder)
-        self.ui.GANSeismicButton.clicked.connect(lambda: self._show_placeholder("GAN inference not available in UI-only mode."))
+        self.ui.GANSeismicButton.clicked.connect(self._generate_seismic)
 
         self.ui.opacitySpinBox.valueChanged.connect(self._update_opacity)
 
@@ -200,6 +207,7 @@ class MainWindow(QMainWindow):
         self.canvas.clear_committed_paths(tag=element_type)
         if element_type == "horizons":
             self.canvas.clear_mask()
+            self.canvas.clear_seismic_overlay()
         if element_type == "horizons":
             self._last_horizons = []
         self.statusBar().showMessage(f"Cleared {element_type} strokes.", 3000)
@@ -227,6 +235,7 @@ class MainWindow(QMainWindow):
         )
         self._last_mask = labels
         self.canvas.set_mask(labels.astype(np.uint8))
+        self.canvas.clear_committed_paths(tag="horizons")
         self._set_drawing_mode("off")
 
     def _update_opacity(self, value: int) -> None:
@@ -235,6 +244,73 @@ class MainWindow(QMainWindow):
 
     def _show_placeholder(self, message: str) -> None:
         self.statusBar().showMessage(message, 4000)
+
+    def _generate_seismic(self) -> None:
+        mask = self._get_mask_for_gan()
+        if mask is None:
+            return
+
+        model = self._get_gan_model()
+        if model is None:
+            return
+
+        patch_size = int(model.input_shape[1])
+        n_channels = int(model.input_shape[-1])
+
+        if mask.ndim == 2:
+            mask_in = mask_to_onehot(mask.astype(np.int16), n_channels=n_channels)
+        else:
+            mask_in = mask.astype(np.float32)
+
+        if mask_in.shape[-1] != n_channels:
+            Dialogs.info(self, "GAN", "Mask channels do not match the model input.")
+            return
+
+        generated = infer_full_adaptive(
+            model,
+            mask_in,
+            patch_size=patch_size,
+            overlap=patch_size // 2,
+            batch_size=8,
+        )
+        seismic = generated.squeeze()
+        self._seismic_overlay = seismic
+        opacity = max(0.0, min(1.0, self.ui.opacitySpinBox.value() / 100.0))
+        self.canvas.set_seismic_overlay(seismic, opacity=opacity)
+        self.statusBar().showMessage("GAN seismic generated.", 3000)
+
+    def _get_mask_for_gan(self) -> Optional[np.ndarray]:
+        if self._last_mask is not None:
+            return self._last_mask
+        if not self._last_horizons:
+            Dialogs.info(self, "GAN", "Generate horizons before running GAN.")
+            return None
+        width = int(self.ui.widthSpinBox.value())
+        height = int(self.ui.heightSpinBox.value())
+        W = max(2.0, float(width))
+        H = max(2.0, float(height))
+        nx = max(2, width)
+        ny = max(2, height)
+        labels = horizons_to_layer_labels(
+            horizons=self._last_horizons,
+            W=W,
+            H=H,
+            nx=nx,
+            ny=ny,
+        )
+        self._last_mask = labels
+        return labels
+
+    def _get_gan_model(self):
+        if self._gan_model is not None:
+            return self._gan_model
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        model_path = os.path.join(repo_root, "ml", "generator_128x128.keras")
+        if not os.path.exists(model_path):
+            Dialogs.info(self, "GAN", f"Model not found: {model_path}")
+            return None
+        self._gan_model = tf.keras.models.load_model(model_path, compile=False)
+        return self._gan_model
 
     def _generate_horizons_auto(self) -> None:
         width = int(self.ui.widthSpinBox.value())

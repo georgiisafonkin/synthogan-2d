@@ -66,4 +66,4 @@ def visualize_npy(data_or_path, title="Data", axis_order="auto", mask_mode="auto
 #visualize_npy("generated_seismic_raw.npy")
 #visualize_npy("generated_seismic_scales_rotated.npy")
 #visualize_npy("generated_seismic_scaled.npy")
-visualize_npy("generated_seismic.npy", title="Data")
+# visualize_npy("generated_seismic.npy", title="Data")
