@@ -62,7 +62,7 @@ python app/main.py
 
 ## Пример работы
 
-![work example](work_example.gif)
+<video src="smooth_pipeline.gif.mp4" controls autoplay loop muted></video>
 
 ## Участие в проекте
 
