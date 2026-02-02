@@ -24,6 +24,11 @@ class CanvasWidget(QGraphicsView):
     """Widget for rendering seismic data on canvas with drawing support."""
 
     def __init__(self, parent=None):
+        """Initialize the canvas widget.
+
+        Args:
+            parent (QWidget | None): Optional parent widget.
+        """
         super().__init__(parent)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
@@ -47,9 +52,20 @@ class CanvasWidget(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def set_canvas_size(self, width: int, height: int) -> None:
+        """Set the canvas scene size.
+
+        Args:
+            width (int): Scene width in pixels.
+            height (int): Scene height in pixels.
+        """
         self._scene.setSceneRect(0, 0, width, height)
 
     def set_mask(self, mask: np.ndarray) -> None:
+        """Display a mask as a pixmap on the canvas.
+
+        Args:
+            mask (np.ndarray): 2D mask array.
+        """
         pixmap = self._mask_to_pixmap(mask)
         if self._mask_item is None:
             self._mask_item = self._scene.addPixmap(pixmap)
@@ -58,11 +74,18 @@ class CanvasWidget(QGraphicsView):
             self._mask_item.setPixmap(pixmap)
 
     def clear_mask(self) -> None:
+        """Remove the mask pixmap from the scene."""
         if self._mask_item is not None:
             self._scene.removeItem(self._mask_item)
             self._mask_item = None
 
     def set_seismic_overlay(self, seismic: Optional[np.ndarray], opacity: float = 0.5) -> None:
+        """Set or clear the seismic overlay.
+
+        Args:
+            seismic (np.ndarray | None): 2D seismic array or None to clear.
+            opacity (float): Overlay opacity in [0, 1].
+        """
         if seismic is None:
             self.clear_seismic_overlay()
             return
@@ -75,26 +98,55 @@ class CanvasWidget(QGraphicsView):
         self._seismic_item.setOpacity(opacity)
 
     def set_seismic_opacity(self, opacity: float) -> None:
+        """Update the seismic overlay opacity.
+
+        Args:
+            opacity (float): Overlay opacity in [0, 1].
+        """
         if self._seismic_item is not None:
             self._seismic_item.setOpacity(opacity)
 
     def clear_seismic_overlay(self) -> None:
+        """Remove the seismic overlay from the scene."""
         if self._seismic_item is not None:
             self._scene.removeItem(self._seismic_item)
             self._seismic_item = None
 
     def set_drawing_mode(self, mode: str) -> None:
+        """Set the current drawing mode.
+
+        Args:
+            mode (str): Mode name (e.g. "horizons", "faults", "distortions", "off").
+        """
         self._drawing_mode = mode
 
     def get_points(self) -> List[Point]:
+        """Get current drawn points.
+
+        Returns:
+            list[Point]: Copy of current points.
+        """
         return list(self._points)
 
     def take_points(self) -> List[Point]:
+        """Get and clear current points.
+
+        Returns:
+            list[Point]: Points drawn since last clear.
+        """
         points = list(self._points)
         self.clear_points()
         return points
 
     def commit_path(self, tag: Optional[str] = None) -> bool:
+        """Commit the current path to the scene.
+
+        Args:
+            tag (str | None): Optional tag for later clearing.
+
+        Returns:
+            bool: True if a path was committed, False otherwise.
+        """
         if len(self._points) < 2:
             return False
         path = self._build_smooth_path(self._points)
@@ -112,6 +164,13 @@ class CanvasWidget(QGraphicsView):
         tag: Optional[str] = None,
         pen: Optional[QPen] = None,
     ) -> None:
+        """Add a path to the scene from provided points.
+
+        Args:
+            points (Iterable[Point]): Points defining the path.
+            tag (str | None): Optional tag for later clearing.
+            pen (QPen | None): Pen to use for rendering.
+        """
         pts = list(points)
         if len(pts) < 2:
             return
@@ -123,6 +182,7 @@ class CanvasWidget(QGraphicsView):
             self._committed_paths_by_tag.setdefault(tag, []).append(item)
 
     def clear_points(self) -> None:
+        """Clear the current uncommitted points and path."""
         for item in self._point_items:
             self._scene.removeItem(item)
         self._point_items.clear()
@@ -132,6 +192,11 @@ class CanvasWidget(QGraphicsView):
             self._path_item = None
 
     def clear_committed_paths(self, tag: Optional[str] = None) -> None:
+        """Clear committed paths by tag or all if tag is None.
+
+        Args:
+            tag (str | None): Tag to clear, or None to clear all.
+        """
         if tag is None:
             for item in self._committed_paths:
                 self._scene.removeItem(item)
@@ -148,12 +213,27 @@ class CanvasWidget(QGraphicsView):
             self._scene.removeItem(item)
 
     def export_paths(self) -> List[QPainterPath]:
+        """Export committed paths and the current path (if any).
+
+        Returns:
+            list[QPainterPath]: Paths for all committed and current strokes.
+        """
         paths = [item.path() for item in self._committed_paths]
         if len(self._points) >= 2:
             paths.append(self._build_smooth_path(self._points))
         return paths
 
     def export_mask(self, width: int, height: int, include_current: bool = True) -> np.ndarray:
+        """Rasterize paths into a mask image.
+
+        Args:
+            width (int): Output width.
+            height (int): Output height.
+            include_current (bool): Whether to include the current path.
+
+        Returns:
+            np.ndarray: 2D uint8 mask.
+        """
         image = QImage(width, height, QImage.Format_Grayscale8)
         image.fill(0)
         painter = QPainter(image)
@@ -172,6 +252,11 @@ class CanvasWidget(QGraphicsView):
         return array[:, :width].copy()
 
     def mousePressEvent(self, event) -> None:
+        """Handle mouse press for drawing.
+
+        Args:
+            event (QMouseEvent): Mouse event.
+        """
         if self._drawing_mode != "off" and event.button() == Qt.LeftButton:
             pos = self.mapToScene(event.pos())
             self._add_point(int(pos.x()), int(pos.y()))
@@ -180,6 +265,11 @@ class CanvasWidget(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
+        """Handle mouse move for drawing.
+
+        Args:
+            event (QMouseEvent): Mouse event.
+        """
         if self._drawing_mode != "off" and event.buttons() & Qt.LeftButton:
             pos = self.mapToScene(event.pos())
             self._add_point(int(pos.x()), int(pos.y()), allow_duplicates=False)
@@ -188,6 +278,13 @@ class CanvasWidget(QGraphicsView):
         super().mouseMoveEvent(event)
 
     def _add_point(self, x: int, y: int, allow_duplicates: bool = True) -> None:
+        """Add a point to the current stroke.
+
+        Args:
+            x (int): X coordinate.
+            y (int): Y coordinate.
+            allow_duplicates (bool): Whether to allow near-duplicate points.
+        """
         if not allow_duplicates and self._points:
             last = self._points[-1]
             if abs(last[0] - x) < 2 and abs(last[1] - y) < 2:
@@ -207,6 +304,7 @@ class CanvasWidget(QGraphicsView):
         self._update_path()
 
     def _update_path(self) -> None:
+        """Update the preview path from current points."""
         if len(self._points) < 2:
             return
         path = self._build_smooth_path(self._points)
@@ -217,6 +315,14 @@ class CanvasWidget(QGraphicsView):
             self._path_item.setPath(path)
 
     def _build_smooth_path(self, points: Iterable[Point]) -> QPainterPath:
+        """Build a smooth path through points.
+
+        Args:
+            points (Iterable[Point]): Input points.
+
+        Returns:
+            QPainterPath: Smoothed path.
+        """
         pts = [QPointF(p[0], p[1]) for p in points]
         pts = self._extend_points_to_edges(pts)
         path = QPainterPath(pts[0])
@@ -238,6 +344,14 @@ class CanvasWidget(QGraphicsView):
         return path
 
     def _extend_points_to_edges(self, pts: List[QPointF]) -> List[QPointF]:
+        """Extend the polyline to the scene edges.
+
+        Args:
+            pts (list[QPointF]): Points to extend.
+
+        Returns:
+            list[QPointF]: Extended points.
+        """
         if len(pts) < 2:
             return pts
         rect = self._scene.sceneRect()
@@ -253,6 +367,18 @@ class CanvasWidget(QGraphicsView):
 
     @staticmethod
     def _ray_to_rect(start: QPointF, next_pt: QPointF, width: float, height: float, reverse: bool) -> QPointF:
+        """Intersect a ray with a rectangle.
+
+        Args:
+            start (QPointF): Ray origin.
+            next_pt (QPointF): Next point along the ray direction.
+            width (float): Rectangle width.
+            height (float): Rectangle height.
+            reverse (bool): Whether to reverse direction.
+
+        Returns:
+            QPointF: Intersection point or start if none.
+        """
         dx = start.x() - next_pt.x() if reverse else next_pt.x() - start.x()
         dy = start.y() - next_pt.y() if reverse else next_pt.y() - start.y()
         if abs(dx) < 1e-6 and abs(dy) < 1e-6:
@@ -286,6 +412,14 @@ class CanvasWidget(QGraphicsView):
 
     @staticmethod
     def _normalize_to_uint8(data: np.ndarray) -> np.ndarray:
+        """Normalize array values to uint8 [0, 255].
+
+        Args:
+            data (np.ndarray): Input array.
+
+        Returns:
+            np.ndarray: uint8 normalized array.
+        """
         if data.dtype == np.uint8:
             return data
         data = data.astype(np.float32)
@@ -297,6 +431,14 @@ class CanvasWidget(QGraphicsView):
         return (scaled * 255.0).clip(0, 255).astype(np.uint8)
 
     def _numpy_to_pixmap(self, data: np.ndarray) -> QPixmap:
+        """Convert a 2D array to a grayscale pixmap.
+
+        Args:
+            data (np.ndarray): 2D array.
+
+        Returns:
+            QPixmap: Grayscale pixmap.
+        """
         if data.ndim != 2:
             raise ValueError("Only 2D arrays are supported for display.")
         img = self._normalize_to_uint8(data)
@@ -306,6 +448,14 @@ class CanvasWidget(QGraphicsView):
         return QPixmap.fromImage(qimage)
 
     def _seismic_to_pixmap(self, data: np.ndarray) -> QPixmap:
+        """Convert a seismic slice to a pixmap using the seismic colormap.
+
+        Args:
+            data (np.ndarray): 2D seismic array.
+
+        Returns:
+            QPixmap: Color-mapped pixmap.
+        """
         if data.ndim != 2:
             raise ValueError("Only 2D arrays are supported for display.")
         data = data.astype(np.float32)
@@ -336,6 +486,14 @@ class CanvasWidget(QGraphicsView):
         return QPixmap.fromImage(qimage)
 
     def _mask_to_pixmap(self, data: np.ndarray) -> QPixmap:
+        """Convert a mask to a pixmap, colorizing label masks.
+
+        Args:
+            data (np.ndarray): 2D mask array.
+
+        Returns:
+            QPixmap: Mask pixmap.
+        """
         if data.ndim != 2:
             raise ValueError("Only 2D arrays are supported for display.")
         if np.issubdtype(data.dtype, np.integer) and int(np.max(data)) > 1:
@@ -343,6 +501,14 @@ class CanvasWidget(QGraphicsView):
         return self._numpy_to_pixmap(data)
 
     def _labels_to_pixmap(self, labels: np.ndarray) -> QPixmap:
+        """Convert label mask to a colored pixmap.
+
+        Args:
+            labels (np.ndarray): 2D label mask.
+
+        Returns:
+            QPixmap: Colored pixmap.
+        """
         height, width = labels.shape
         max_label = int(labels.max())
         if max_label <= 0:
@@ -365,4 +531,9 @@ class CanvasWidget(QGraphicsView):
         return QPixmap.fromImage(qimage)
 
     def fault_pen(self) -> QPen:
+        """Get pen for drawing faults.
+
+        Returns:
+            QPen: Fault pen.
+        """
         return self._pen_fault

@@ -23,6 +23,14 @@ class Dialogs:
 
     @staticmethod
     def save_mask_dialog(parent: Optional[QWidget] = None) -> Optional[str]:
+        """Open a save dialog for mask files.
+
+        Args:
+            parent (QWidget | None): Parent widget.
+
+        Returns:
+            str | None: Selected file path or None.
+        """
         filepath, _ = QFileDialog.getSaveFileName(
             parent,
             "Save mask",
@@ -33,6 +41,14 @@ class Dialogs:
 
     @staticmethod
     def open_mask_dialog(parent: Optional[QWidget] = None) -> Optional[str]:
+        """Open a dialog for selecting a mask file.
+
+        Args:
+            parent (QWidget | None): Parent widget.
+
+        Returns:
+            str | None: Selected file path or None.
+        """
         filepath, _ = QFileDialog.getOpenFileName(
             parent,
             "Open mask",
@@ -43,6 +59,13 @@ class Dialogs:
 
     @staticmethod
     def info(parent: Optional[QWidget], title: str, message: str) -> None:
+        """Show an informational message box.
+
+        Args:
+            parent (QWidget | None): Parent widget.
+            title (str): Dialog title.
+            message (str): Dialog message.
+        """
         QMessageBox.information(parent, title, message)
 
     @staticmethod
@@ -53,6 +76,18 @@ class Dialogs:
         sigma_cross: float,
         along_power: float,
     ) -> Optional[Tuple[float, float, str, float]]:
+        """Collect manual fault parameters.
+
+        Args:
+            parent (QWidget | None): Parent widget.
+            throw (float): Vertical displacement.
+            sigma_cross (float): Cross-fault decay width.
+            along_power (float): Along-fault taper power.
+
+        Returns:
+            tuple[float, float, str, float] | None:
+                (throw, sigma_cross, uplift_side, along_power) or None if cancelled.
+        """
         dialog = QDialog(parent)
         dialog.setWindowTitle("Fault parameters")
         layout = QFormLayout(dialog)
@@ -102,6 +137,15 @@ class Dialogs:
         *,
         amplitude: float,
     ) -> Optional[float]:
+        """Collect deformation amplitude for horizon generation.
+
+        Args:
+            parent (QWidget | None): Parent widget.
+            amplitude (float): Default amplitude.
+
+        Returns:
+            float | None: Amplitude value or None if cancelled.
+        """
         dialog = QDialog(parent)
         dialog.setWindowTitle("Deformation amplitude")
         layout = QFormLayout(dialog)

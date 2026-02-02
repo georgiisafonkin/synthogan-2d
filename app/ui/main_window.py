@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):
     """Main application window."""
 
     def __init__(self):
+        """Initialize the main window and wire UI signals."""
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -57,6 +58,7 @@ class MainWindow(QMainWindow):
         self._drawing_mode = "off"
 
     def _replace_canvas(self) -> None:
+        """Replace the placeholder graphics view with the custom canvas."""
         layout = self.ui.elementsvVerticalLayout
         index = layout.indexOf(self.ui.canvasGraphicsView)
         layout.removeWidget(self.ui.canvasGraphicsView)
@@ -65,6 +67,7 @@ class MainWindow(QMainWindow):
         layout.setAlignment(self.canvas, Qt.AlignmentFlag.AlignCenter)
 
     def _setup_controls(self) -> None:
+        """Configure widgets, connect signals, and apply defaults."""
         self.ui.widthSpinBox.setRange(64, 4096)
         self.ui.heightSpinBox.setRange(64, 4096)
         self.ui.widthSpinBox.setValue(512)
@@ -135,6 +138,7 @@ class MainWindow(QMainWindow):
         self._apply_canvas_size()
 
     def _fix_manual_checkboxes(self) -> None:
+        """Fix the size of manual drawing checkboxes."""
         checkboxes = [
             self.ui.horizonsCheckBox,
             self.ui.riftsCheckBox,
@@ -146,6 +150,7 @@ class MainWindow(QMainWindow):
             cb.setFixedSize(max_width, max_height)
 
     def _fix_label_sizes(self) -> None:
+        """Fix label sizes (excluding width/height labels)."""
         labels = [
             self.ui.horizonsLabel,
             self.ui.lengthLabel,
@@ -175,6 +180,7 @@ class MainWindow(QMainWindow):
         self.ui.distortionCompressButton.setEnabled(distortions_enabled)
 
     def _apply_canvas_size(self) -> None:
+        """Apply the canvas size from UI spinboxes."""
         width = int(self.ui.widthSpinBox.value())
         height = int(self.ui.heightSpinBox.value())
         self.canvas.set_canvas_size(width, height)
@@ -182,11 +188,21 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Canvas size set to {width}x{height}.", 3000)
 
     def _set_drawing_mode(self, mode: str) -> None:
+        """Switch the drawing mode.
+
+        Args:
+            mode (str): Drawing mode name.
+        """
         self._drawing_mode = mode
         self.canvas.set_drawing_mode(mode)
         self.statusBar().showMessage(f"Drawing mode: {mode}.", 3000)
 
     def _add_stroke(self, element_type: str) -> None:
+        """Add a manual stroke for the specified element type.
+
+        Args:
+            element_type (str): One of "horizons", "faults", "distortions".
+        """
         points = self.canvas.get_points()
         if len(points) < 2:
             self.statusBar().showMessage("No points to add.", 3000)
@@ -201,6 +217,11 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Added {element_type} stroke.", 3000)
 
     def _clear_strokes(self, element_type: str) -> None:
+        """Clear strokes for a given element type.
+
+        Args:
+            element_type (str): One of "horizons", "faults", "distortions".
+        """
         self._strokes[element_type].clear()
         if self._drawing_mode == element_type:
             self.canvas.clear_points()
@@ -213,9 +234,15 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Cleared {element_type} strokes.", 3000)
 
     def _save_placeholder(self, element_type: str) -> None:
+        """Disable drawing mode when save buttons are pressed.
+
+        Args:
+            element_type (str): Button group identifier.
+        """
         self._set_drawing_mode("off")
 
     def _save_mask_placeholder(self) -> None:
+        """Build and display a mask from current horizons."""
         if not self._last_horizons:
             Dialogs.info(self, "Mask", "Generate horizons before building the mask.")
             self._set_drawing_mode("off")
@@ -239,13 +266,24 @@ class MainWindow(QMainWindow):
         self._set_drawing_mode("off")
 
     def _update_opacity(self, value: int) -> None:
+        """Update seismic overlay opacity.
+
+        Args:
+            value (int): Opacity percentage 0..100.
+        """
         opacity = max(0.0, min(1.0, value / 100.0))
         self.canvas.set_seismic_opacity(opacity)
 
     def _show_placeholder(self, message: str) -> None:
+        """Show a transient status message.
+
+        Args:
+            message (str): Message text.
+        """
         self.statusBar().showMessage(message, 4000)
 
     def _generate_seismic(self) -> None:
+        """Generate and overlay a seismic slice via GAN."""
         mask = self._get_mask_for_gan()
         if mask is None:
             return
@@ -280,6 +318,11 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("GAN seismic generated.", 3000)
 
     def _get_mask_for_gan(self) -> Optional[np.ndarray]:
+        """Get a label mask for GAN inference.
+
+        Returns:
+            np.ndarray | None: Label mask or None if unavailable.
+        """
         if self._last_mask is not None:
             return self._last_mask
         if not self._last_horizons:
@@ -302,6 +345,11 @@ class MainWindow(QMainWindow):
         return labels
 
     def _get_gan_model(self):
+        """Load and cache the GAN model.
+
+        Returns:
+            Any: Loaded model or None if missing.
+        """
         if self._gan_model is not None:
             return self._gan_model
         repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -313,6 +361,7 @@ class MainWindow(QMainWindow):
         return self._gan_model
 
     def _generate_horizons_auto(self) -> None:
+        """Generate horizons automatically and draw them on the canvas."""
         width = int(self.ui.widthSpinBox.value())
         height = int(self.ui.heightSpinBox.value())
         num_horizons = int(self.ui.horizonsSpinBox.value())
@@ -373,6 +422,7 @@ class MainWindow(QMainWindow):
         )
 
     def _generate_faults_auto(self) -> None:
+        """Generate faults automatically and apply to horizons."""
         width = int(self.ui.widthSpinBox.value())
         height = int(self.ui.heightSpinBox.value())
         num_faults = int(self.ui.riftsAmountSpinBox.value())
@@ -453,6 +503,11 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Generated {len(lines)} faults.", 3000)
 
     def _add_manual_fault(self, points: List[Point]) -> None:
+        """Apply a manual fault defined by user-drawn points.
+
+        Args:
+            points (list[Point]): Points defining the fault segment.
+        """
         if not self._last_horizons:
             self.statusBar().showMessage("Generate or draw horizons first.", 3000)
             return

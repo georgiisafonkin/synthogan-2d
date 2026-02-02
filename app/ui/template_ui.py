@@ -22,6 +22,11 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QGraphicsView, QGroupBox
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
+        """Build and wire the UI widgets.
+
+        Args:
+            MainWindow (QMainWindow): Main window instance.
+        """
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1048, 842)
@@ -376,6 +381,11 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
+        """Apply translated text to UI elements.
+
+        Args:
+            MainWindow (QMainWindow): Main window instance.
+        """
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"\u0417\u0430\u0434\u0430\u0439\u0442\u0435 \u0440\u0430\u0437\u043c\u0435\u0440\u044b \u043f\u043e\u043b\u043e\u0442\u043d\u0430", None))
         self.WidthLabel.setText(QCoreApplication.translate("MainWindow", u"\u0428\u0438\u0440\u0438\u043d\u0430:", None))

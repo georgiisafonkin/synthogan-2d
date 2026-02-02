@@ -60,6 +60,10 @@ poetry install
 python app/main.py
 ```
 
+## Пример работы
+
+![work example](work_example.gif)
+
 ## Участие в проекте
 
 Будем рады любому вкладу:
